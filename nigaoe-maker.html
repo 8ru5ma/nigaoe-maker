@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>にがおえメーカー</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@300;400;700&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f0e0d;--surface:#1a1917;--surface2:#242220;
+  --border:#2e2c29;--text:#f0ece4;--muted:#6b6760;
+  --accent:#e8c547;--r:3px;
+}
+body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;display:grid;grid-template-rows:auto 1fr}
+header{padding:1.1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:1rem}
+.logo{font-family:'Zen Kaku Gothic New',sans-serif;font-weight:700;font-size:1.4rem;letter-spacing:.05em}
+.logo em{color:var(--accent);font-style:normal}
+.badge{font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);border:1px solid var(--border);padding:.2rem .6rem;border-radius:999px}
+.header-right{margin-left:auto;display:flex;gap:.5rem;align-items:center}
+.app{display:grid;grid-template-columns:260px 1fr 280px;height:calc(100vh - 57px);overflow:hidden}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.tab-bar{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;scrollbar-width:none}
+.tab-bar::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;padding:.65rem .5rem;background:none;border:none;font-family:'DM Mono',monospace;font-size:.56rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);cursor:pointer;transition:all .15s;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.parts-scroll{overflow-y:auto;flex:1;padding:1rem;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.part-section{margin-bottom:1.4rem}
+.part-section-label{font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:.6rem}
+.parts-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.35rem}
+.part-thumb{aspect-ratio:1;border:1.5px solid var(--border);border-radius:var(--r);background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;padding:3px;position:relative;overflow:hidden}
+.part-thumb:hover{border-color:var(--muted)}
+.part-thumb.active{border-color:var(--accent);background:rgba(232,197,71,.07)}
+.part-thumb svg{width:100%;height:100%}
+.part-thumb .lbl{position:absolute;bottom:2px;left:0;right:0;font-size:.4rem;text-align:center;color:var(--muted);pointer-events:none;line-height:1}
+.part-thumb.active .lbl{color:var(--accent)}
+.canvas-area{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.2rem;background:var(--bg)}
+.face-canvas{width:340px;height:340px;border-radius:50%;position:relative;box-shadow:0 0 0 1px rgba(255,255,255,.06),0 20px 60px rgba(0,0,0,.5);overflow:hidden;transition:background .3s;flex-shrink:0}
+#mainSvg{width:100%;height:100%}
+.bg-row{display:flex;gap:.4rem;align-items:center}
+.bg-label{font-size:.55rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-right:.2rem}
+.bg-dot{width:18px;height:18px;border-radius:50%;cursor:pointer;border:2px solid var(--border);transition:all .15s}
+.bg-dot:hover{transform:scale(1.15)}
+.bg-dot.active{border-color:var(--text);transform:scale(1.1)}
+.canvas-actions{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center}
+.can-btn{padding:.45rem 1rem;border:1px solid var(--border);background:none;color:var(--text);font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;border-radius:var(--r);transition:all .15s}
+.can-btn:hover{background:var(--surface2);border-color:var(--muted)}
+.can-btn.primary{background:var(--accent);color:#0f0e0d;border-color:var(--accent)}
+.can-btn.primary:hover{background:#f0d060}
+.can-btn.on{border-color:var(--accent);color:var(--accent)}
+.controls{background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;padding:1.2rem;scrollbar-width:thin;scrollbar-color:var(--border) transparent;display:flex;flex-direction:column;gap:1.4rem}
+.ctrl-section-label{font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:.8rem}
+.ctrl-row{margin-bottom:.8rem}
+.ctrl-label{display:flex;justify-content:space-between;align-items:center;font-size:.62rem;color:var(--muted);margin-bottom:.35rem}
+.ctrl-val{color:var(--accent);font-size:.58rem}
+input[type=range]{-webkit-appearance:none;width:100%;height:2px;background:var(--border);border-radius:999px;outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--accent);cursor:pointer;transition:transform .1s}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.3)}
+.color-row{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.4rem}
+.color-dot{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s}
+.color-dot:hover{transform:scale(1.15)}
+.color-dot.active{border-color:var(--text)}
+@media(max-width:900px){
+  body{display:block}
+  .app{display:flex;flex-direction:column;height:auto;overflow:visible}
+  .sidebar,.controls{display:flex;max-height:240px;border:none;border-bottom:1px solid var(--border)}
+  .canvas-area{padding:1.5rem;min-height:340px}
+  .face-canvas{width:260px;height:260px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">に<em>が</em>おえ <em>M</em>aker</div>
+  <div class="badge">beta</div>
+  <div class="header-right">
+    <button class="can-btn" id="sketchBtn">手書き OFF</button>
+  </div>
+</header>
+<div class="app">
+  <div class="sidebar">
+    <div class="tab-bar">
+      <button class="tab active" data-tab="face">顔型</button>
+      <button class="tab" data-tab="eyes">目</button>
+      <button class="tab" data-tab="brows">眉</button>
+      <button class="tab" data-tab="nose">鼻</button>
+      <button class="tab" data-tab="mouth">口</button>
+      <button class="tab" data-tab="hair">髪</button>
+      <button class="tab" data-tab="extras">小物</button>
+    </div>
+    <div class="parts-scroll" id="partsPanel"></div>
+  </div>
+  <div class="canvas-area">
+    <div class="face-canvas" id="faceCanvas">
+      <svg id="mainSvg" viewBox="0 0 340 340" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="sk" x="-10%" y="-10%" width="120%" height="120%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.022" numOctaves="4" seed="5" result="n"/>
+            <feDisplacementMap in="SourceGraphic" in2="n" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
+          </filter>
+        </defs>
+      </svg>
+    </div>
+    <div class="bg-row">
+      <span class="bg-label">背景</span>
+      <div id="bgDots"></div>
+    </div>
+    <div class="canvas-actions">
+      <button class="can-btn" id="randomBtn">ランダム</button>
+      <button class="can-btn" id="resetBtn">リセット</button>
+      <button class="can-btn primary" id="saveBtn">PNG 保存</button>
+    </div>
+  </div>
+  <div class="controls" id="controlsPanel"></div>
+</div>
+
+<script>
+// ── PARTS ──────────────────────────────────────────────────────
+const PARTS = {
+  face:[
+    {id:'f1',label:'丸',     path:'<ellipse cx="170" cy="176" rx="120" ry="128" fill="SKIN" stroke="INK" stroke-width="2.5"/><ellipse cx="50"  cy="180" rx="13" ry="17" fill="SKIN" stroke="INK" stroke-width="2"/><ellipse cx="290" cy="180" rx="13" ry="17" fill="SKIN" stroke="INK" stroke-width="2"/>'},
+    {id:'f2',label:'卵型',   path:'<ellipse cx="170" cy="178" rx="105" ry="136" fill="SKIN" stroke="INK" stroke-width="2.5"/><ellipse cx="65"  cy="184" rx="12" ry="16" fill="SKIN" stroke="INK" stroke-width="2"/><ellipse cx="275" cy="184" rx="12" ry="16" fill="SKIN" stroke="INK" stroke-width="2"/>'},
+    {id:'f3',label:'四角',   path:'<rect x="60" y="58" width="220" height="228" rx="40" fill="SKIN" stroke="INK" stroke-width="2.5"/><ellipse cx="58"  cy="176" rx="12" ry="16" fill="SKIN" stroke="INK" stroke-width="2"/><ellipse cx="282" cy="176" rx="12" ry="16" fill="SKIN" stroke="INK" stroke-width="2"/>'},
+    {id:'f4',label:'シャープ',path:'<path d="M170 50C260 50 292 115 290 182C288 242 238 305 170 314C102 305 52 242 50 182C48 115 80 50 170 50Z" fill="SKIN" stroke="INK" stroke-width="2.5"/><ellipse cx="46"  cy="178" rx="12" ry="16" fill="SKIN" stroke="INK" stroke-width="2"/><ellipse cx="294" cy="178" rx="12" ry="16" fill="SKIN" stroke="INK" stroke-width="2"/>'},
+    {id:'f5',label:'ぽっちゃり',path:'<ellipse cx="170" cy="183" rx="134" ry="124" fill="SKIN" stroke="INK" stroke-width="2.5"/><ellipse cx="37"  cy="188" rx="14" ry="18" fill="SKIN" stroke="INK" stroke-width="2"/><ellipse cx="303" cy="188" rx="14" ry="18" fill="SKIN" stroke="INK" stroke-width="2"/>'},
+    {id:'f6',label:'ほっそり',path:'<ellipse cx="170" cy="178" rx="90"  ry="138" fill="SKIN" stroke="INK" stroke-width="2.5"/><ellipse cx="80"  cy="182" rx="11" ry="15" fill="SKIN" stroke="INK" stroke-width="2"/><ellipse cx="260" cy="182" rx="11" ry="15" fill="SKIN" stroke="INK" stroke-width="2"/>'},
+  ],
+  eyes:[
+    {id:'e1',label:'丸目',  path:'<circle cx="EX1" cy="EY" r="14" fill="white" stroke="INK" stroke-width="2"/><circle cx="EX1" cy="EY" r="7" fill="IRIS"/><circle cx="EX1p4" cy="EYm4" r="3" fill="white"/><circle cx="EX2" cy="EY" r="14" fill="white" stroke="INK" stroke-width="2"/><circle cx="EX2" cy="EY" r="7" fill="IRIS"/><circle cx="EX2p4" cy="EYm4" r="3" fill="white"/>'},
+    {id:'e2',label:'細目',  path:'<ellipse cx="EX1" cy="EY" rx="18" ry="9" fill="white" stroke="INK" stroke-width="2"/><ellipse cx="EX1" cy="EY" rx="9" ry="5" fill="IRIS"/><ellipse cx="EX2" cy="EY" rx="18" ry="9" fill="white" stroke="INK" stroke-width="2"/><ellipse cx="EX2" cy="EY" rx="9" ry="5" fill="IRIS"/>'},
+    {id:'e3',label:'タレ目', path:'<path d="M EX1m18 EYm4 Q EX1 EYp10 EX1p18 EYm4" fill="white" stroke="INK" stroke-width="2"/><ellipse cx="EX1" cy="EY" rx="8" ry="7" fill="IRIS"/><circle cx="EX1p3" cy="EYm3" r="2.5" fill="white"/><path d="M EX2m18 EYm4 Q EX2 EYp10 EX2p18 EYm4" fill="white" stroke="INK" stroke-width="2"/><ellipse cx="EX2" cy="EY" rx="8" ry="7" fill="IRIS"/><circle cx="EX2p3" cy="EYm3" r="2.5" fill="white"/>'},
+    {id:'e4',label:'ツリ目', path:'<path d="M EX1m18 EYp4 Q EX1 EYm10 EX1p18 EYp4" fill="white" stroke="INK" stroke-width="2"/><ellipse cx="EX1" cy="EY" rx="8" ry="7" fill="IRIS"/><circle cx="EX1p3" cy="EYm3" r="2.5" fill="white"/><path d="M EX2m18 EYp4 Q EX2 EYm10 EX2p18 EYp4" fill="white" stroke="INK" stroke-width="2"/><ellipse cx="EX2" cy="EY" rx="8" ry="7" fill="IRIS"/><circle cx="EX2p3" cy="EYm3" r="2.5" fill="white"/>'},
+    {id:'e5',label:'細め',  path:'<line x1="EX1m16" y1="EY" x2="EX1p16" y2="EY" stroke="INK" stroke-width="3" stroke-linecap="round"/><line x1="EX2m16" y1="EY" x2="EX2p16" y2="EY" stroke="INK" stroke-width="3" stroke-linecap="round"/>'},
+    {id:'e6',label:'ハート', path:'<path d="M EX1 EYp6 C EX1m14 EYm8 EX1m18 EYp4 EX1 EYp14 C EX1p18 EYp4 EX1p14 EYm8 EX1 EYp6Z" fill="IRIS"/><path d="M EX2 EYp6 C EX2m14 EYm8 EX2m18 EYp4 EX2 EYp14 C EX2p18 EYp4 EX2p14 EYm8 EX2 EYp6Z" fill="IRIS"/>'},
+    {id:'e7',label:'星目',  path:'<text x="EX1" y="EYp8" text-anchor="middle" font-size="24" fill="IRIS">★</text><text x="EX2" y="EYp8" text-anchor="middle" font-size="24" fill="IRIS">★</text>'},
+    {id:'e8',label:'×目',   path:'<line x1="EX1m10" y1="EYm10" x2="EX1p10" y2="EYp10" stroke="INK" stroke-width="3" stroke-linecap="round"/><line x1="EX1p10" y1="EYm10" x2="EX1m10" y2="EYp10" stroke="INK" stroke-width="3" stroke-linecap="round"/><line x1="EX2m10" y1="EYm10" x2="EX2p10" y2="EYp10" stroke="INK" stroke-width="3" stroke-linecap="round"/><line x1="EX2p10" y1="EYm10" x2="EX2m10" y2="EYp10" stroke="INK" stroke-width="3" stroke-linecap="round"/>'},
+    {id:'e9',label:'ウィンク',path:'<path d="M EX1m14 EY C EX1m6 EYm9 EX1p6 EYm9 EX1p14 EY" fill="none" stroke="INK" stroke-width="2.5" stroke-linecap="round"/><circle cx="EX2" cy="EY" r="14" fill="white" stroke="INK" stroke-width="2"/><circle cx="EX2" cy="EY" r="7" fill="IRIS"/><circle cx="EX2p4" cy="EYm4" r="3" fill="white"/>'},
+    {id:'e10',label:'涙目',  path:'<circle cx="EX1" cy="EY" r="16" fill="white" stroke="INK" stroke-width="2"/><circle cx="EX1" cy="EY" r="9" fill="IRIS"/><circle cx="EX1p5" cy="EYm5" r="3.5" fill="white"/><path d="M EX1m3 EYp16 Q EX1 EYp26 EX1p3 EYp16" fill="#a8d8f0" opacity=".8"/><circle cx="EX2" cy="EY" r="16" fill="white" stroke="INK" stroke-width="2"/><circle cx="EX2" cy="EY" r="9" fill="IRIS"/><circle cx="EX2p5" cy="EYm5" r="3.5" fill="white"/><path d="M EX2m3 EYp16 Q EX2 EYp26 EX2p3 EYp16" fill="#a8d8f0" opacity=".8"/>'},
+  ],
+  brows:[
+    {id:'b1',label:'普通',   path:'<path d="M EX1m18 BYm4 Q EX1 BYm12 EX1p18 BYm4" fill="none" stroke="INK" stroke-width="3" stroke-linecap="round"/><path d="M EX2m18 BYm4 Q EX2 BYm12 EX2p18 BYm4" fill="none" stroke="INK" stroke-width="3" stroke-linecap="round"/>'},
+    {id:'b2',label:'太め',   path:'<path d="M EX1m18 BYm2 Q EX1 BYm14 EX1p18 BYm2Z" fill="INK"/><path d="M EX2m18 BYm2 Q EX2 BYm14 EX2p18 BYm2Z" fill="INK"/>'},
+    {id:'b3',label:'ハの字', path:'<path d="M EX1m16 BYm10 L EX1p16 BY" fill="none" stroke="INK" stroke-width="3" stroke-linecap="round"/><path d="M EX2m16 BY L EX2p16 BYm10" fill="none" stroke="INK" stroke-width="3" stroke-linecap="round"/>'},
+    {id:'b4',label:'への字', path:'<path d="M EX1m16 BY L EX1p16 BYm10" fill="none" stroke="INK" stroke-width="3" stroke-linecap="round"/><path d="M EX2m16 BYm10 L EX2p16 BY" fill="none" stroke="INK" stroke-width="3" stroke-linecap="round"/>'},
+    {id:'b5',label:'一直線', path:'<line x1="EX1m18" y1="BY" x2="EX1p18" y2="BY" stroke="INK" stroke-width="3" stroke-linecap="round"/><line x1="EX2m18" y1="BY" x2="EX2p18" y2="BY" stroke="INK" stroke-width="3" stroke-linecap="round"/>'},
+    {id:'b6',label:'アーチ', path:'<path d="M EX1m18 BY Q EX1 BYm18 EX1p18 BY" fill="none" stroke="INK" stroke-width="3" stroke-linecap="round"/><path d="M EX2m18 BY Q EX2 BYm18 EX2p18 BY" fill="none" stroke="INK" stroke-width="3" stroke-linecap="round"/>'},
+  ],
+  nose:[
+    {id:'n1',label:'点',   path:'<circle cx="170" cy="NY" r="3" fill="INK" opacity=".45"/>'},
+    {id:'n2',label:'丸鼻', path:'<path d="M 158 NYp6 Q 170 NYm10 182 NYp6" fill="none" stroke="INK" stroke-width="1.8"/><circle cx="162" cy="NYp6" r="5" fill="none" stroke="INK" stroke-width="1.8"/><circle cx="178" cy="NYp6" r="5" fill="none" stroke="INK" stroke-width="1.8"/>'},
+    {id:'n3',label:'三角', path:'<path d="M 158 NYp6 L 170 NYm8 L 182 NYp6" fill="none" stroke="INK" stroke-width="2" stroke-linejoin="round"/>'},
+    {id:'n4',label:'なし', path:''},
+    {id:'n5',label:'猫鼻', path:'<path d="M 165 NY L 170 NYm6 L 175 NY" fill="INK" opacity=".45"/><line x1="170" y1="NY" x2="170" y2="NYp7" stroke="INK" stroke-width="1.5" opacity=".45"/>'},
+  ],
+  mouth:[
+    {id:'m1',label:'笑顔',   path:'<path d="M 148 MY Q 170 MYp22 192 MY" fill="none" stroke="INK" stroke-width="2.5" stroke-linecap="round"/>'},
+    {id:'m2',label:'にっこり',path:'<path d="M 150 MY Q 170 MYp28 190 MY" fill="LIPS" stroke="INK" stroke-width="2"/><path d="M 150 MY Q 170 MYp8 190 MY" fill="none" stroke="INK" stroke-width="1.2"/>'},
+    {id:'m3',label:'への字',  path:'<path d="M 148 MYp8 Q 170 MY 192 MYp8" fill="none" stroke="INK" stroke-width="2.5" stroke-linecap="round"/>'},
+    {id:'m4',label:'一文字',  path:'<line x1="150" y1="MY" x2="190" y2="MY" stroke="INK" stroke-width="2.5" stroke-linecap="round"/>'},
+    {id:'m5',label:'驚き',   path:'<ellipse cx="170" cy="MY" rx="14" ry="10" fill="INK"/>'},
+    {id:'m6',label:'むー',   path:'<path d="M 148 MY Q 170 MYm12 192 MY" fill="none" stroke="INK" stroke-width="2.5" stroke-linecap="round"/>'},
+    {id:'m7',label:'えへへ',  path:'<path d="M 150 MYp2 Q 170 MYp18 190 MYp2" fill="LIPS" stroke="INK" stroke-width="2"/><path d="M 155 MY Q 170 MYp6 185 MY" fill="none" stroke="INK" stroke-width="1.2"/>'},
+    {id:'m8',label:'にやり',  path:'<path d="M 150 MY Q 160 MYp20 170 MYp18 Q 180 MYp20 190 MY" fill="LIPS" stroke="INK" stroke-width="2"/>'},
+  ],
+  hair:[
+    {id:'h1', label:'なし',      path:''},
+    {id:'h2', label:'ショート',   path:'<path d="M 52 162 Q 50 40 170 36 Q 290 40 288 162 L 280 126 Q 254 48 170 46 Q 86 48 60 126Z" fill="HAIR"/>'},
+    {id:'h3', label:'ロング',    path:'<path d="M 52 162 Q 50 40 170 36 Q 290 40 288 162 L 280 126 Q 254 48 170 46 Q 86 48 60 126Z" fill="HAIR"/><path d="M 52 162 Q 36 220 44 286 L 64 270 Q 55 206 63 168" fill="HAIR"/><path d="M 288 162 Q 304 220 296 286 L 276 270 Q 285 206 277 168" fill="HAIR"/>'},
+    {id:'h4', label:'ツンツン',   path:'<path d="M 74 143 Q 56 40 170 35 Q 284 40 266 143Z" fill="HAIR"/><path d="M 95 128 Q 82 56 122 47 Q 112 90 132 102" fill="HAIR"/><path d="M 150 90 Q 156 28 170 26 Q 184 28 190 90" fill="HAIR"/><path d="M 208 102 Q 228 90 218 47 Q 258 56 245 128" fill="HAIR"/>'},
+    {id:'h5', label:'おだんご',   path:'<path d="M 74 152 Q 72 48 170 42 Q 268 48 266 152Z" fill="HAIR"/><circle cx="170" cy="40" r="26" fill="HAIR"/><circle cx="170" cy="40" r="12" fill="none" stroke="rgba(0,0,0,.22)" stroke-width="2"/>'},
+    {id:'h6', label:'帽子',      path:'<rect x="78" y="96" width="184" height="22" rx="5" fill="HAIR"/><path d="M 100 96 Q 100 50 170 46 Q 240 50 240 96Z" fill="HAIR"/>'},
+    {id:'h7', label:'ウェーブ',   path:'<path d="M 54 163 Q 50 42 170 36 Q 290 42 286 163 L 278 130 Q 252 48 170 46 Q 88 48 62 130Z" fill="HAIR"/><path d="M 54 163 Q 34 196 48 218 Q 30 242 46 264 Q 34 282 52 292 L 62 278 Q 48 264 56 246 Q 42 224 56 202 Q 44 182 62 167" fill="HAIR"/><path d="M 286 163 Q 306 196 292 218 Q 310 242 294 264 Q 306 282 288 292 L 278 278 Q 292 264 284 246 Q 298 224 284 202 Q 296 182 278 167" fill="HAIR"/>'},
+    {id:'h8', label:'ポニー',     path:'<path d="M 74 152 Q 72 48 170 42 Q 268 48 266 152 L 258 110 Q 236 52 170 50 Q 104 52 82 110Z" fill="HAIR"/><path d="M 148 52 Q 162 18 170 14 Q 178 18 192 52" fill="HAIR"/><ellipse cx="170" cy="46" rx="26" ry="10" fill="HAIR"/>'},
+    {id:'h9', label:'ボブ',      path:'<path d="M 56 173 Q 54 44 170 38 Q 286 44 284 173 L 282 190 Q 254 212 170 214 Q 86 212 58 190Z" fill="HAIR"/>'},
+    {id:'h10',label:'もじゃ',    path:'<circle cx="118" cy="78"  r="32" fill="HAIR"/><circle cx="153" cy="52"  r="30" fill="HAIR"/><circle cx="187" cy="52"  r="30" fill="HAIR"/><circle cx="222" cy="78"  r="32" fill="HAIR"/><circle cx="98"  cy="112" r="28" fill="HAIR"/><circle cx="242" cy="112" r="28" fill="HAIR"/><path d="M 100 145 Q 100 52 170 44 Q 240 52 240 145Z" fill="HAIR"/>'},
+  ],
+  extras:[
+    {id:'x1',label:'なし',    path:''},
+    {id:'x2',label:'丸眼鏡',  path:'<circle cx="GX1" cy="GY" r="19" fill="none" stroke="INK" stroke-width="2.5"/><circle cx="GX2" cy="GY" r="19" fill="none" stroke="INK" stroke-width="2.5"/><line x1="GX1p19" y1="GY" x2="GX2m19" y2="GY" stroke="INK" stroke-width="2"/><line x1="GX1m19" y1="GY" x2="GX1m38" y2="GYm5" stroke="INK" stroke-width="2" stroke-linecap="round"/><line x1="GX2p19" y1="GY" x2="GX2p38" y2="GYm5" stroke="INK" stroke-width="2" stroke-linecap="round"/>'},
+    {id:'x3',label:'四角眼鏡', path:'<rect x="GX1m20" y="GYm14" width="40" height="28" rx="4" fill="none" stroke="INK" stroke-width="2.5"/><rect x="GX2m20" y="GYm14" width="40" height="28" rx="4" fill="none" stroke="INK" stroke-width="2.5"/><line x1="GX1p20" y1="GY" x2="GX2m20" y2="GY" stroke="INK" stroke-width="2"/><line x1="GX1m20" y1="GY" x2="GX1m38" y2="GYm5" stroke="INK" stroke-width="2" stroke-linecap="round"/><line x1="GX2p20" y1="GY" x2="GX2p38" y2="GYm5" stroke="INK" stroke-width="2" stroke-linecap="round"/>'},
+    {id:'x4',label:'ほっぺ',  path:'<ellipse cx="108" cy="200" rx="22" ry="12" fill="#f08090" opacity=".5"/><ellipse cx="232" cy="200" rx="22" ry="12" fill="#f08090" opacity=".5"/>'},
+    {id:'x5',label:'そばかす', path:'<circle cx="118" cy="192" r="2.5" fill="#b06050" opacity=".6"/><circle cx="127" cy="186" r="2" fill="#b06050" opacity=".5"/><circle cx="112" cy="200" r="2" fill="#b06050" opacity=".5"/><circle cx="107" cy="190" r="1.5" fill="#b06050" opacity=".4"/><circle cx="222" cy="192" r="2.5" fill="#b06050" opacity=".6"/><circle cx="213" cy="186" r="2" fill="#b06050" opacity=".5"/><circle cx="228" cy="200" r="2" fill="#b06050" opacity=".5"/><circle cx="233" cy="190" r="1.5" fill="#b06050" opacity=".4"/>'},
+    {id:'x6',label:'サングラス',path:'<ellipse cx="GX1" cy="GY" rx="22" ry="14" fill="rgba(12,12,12,.8)" stroke="INK" stroke-width="2"/><ellipse cx="GX2" cy="GY" rx="22" ry="14" fill="rgba(12,12,12,.8)" stroke="INK" stroke-width="2"/><line x1="GX1p22" y1="GY" x2="GX2m22" y2="GY" stroke="INK" stroke-width="2.5"/><line x1="GX1m22" y1="GY" x2="GX1m40" y2="GYm5" stroke="INK" stroke-width="2" stroke-linecap="round"/><line x1="GX2p22" y1="GY" x2="GX2p40" y2="GYm5" stroke="INK" stroke-width="2" stroke-linecap="round"/>'},
+    {id:'x7',label:'リボン',  path:'<path d="M 152 52 L 167 60 L 152 68Z" fill="LIPS"/><path d="M 188 52 L 173 60 L 188 68Z" fill="LIPS"/><circle cx="170" cy="60" r="8" fill="LIPS"/>'},
+    {id:'x8',label:'マスク',  path:'<rect x="122" y="212" width="96" height="60" rx="14" fill="white" stroke="INK" stroke-width="2"/><path d="M 122 232 Q 170 245 218 232" fill="none" stroke="INK" stroke-width="1.4" opacity=".35"/><line x1="122" y1="226" x2="100" y2="224" stroke="INK" stroke-width="1.8"/><line x1="218" y1="226" x2="240" y2="224" stroke="INK" stroke-width="1.8"/>'},
+  ]
+};
+
+// ── STATE ──────────────────────────────────────────────────────
+const state = {
+  selected:{face:'f1',eyes:'e1',brows:'b1',nose:'n1',mouth:'m1',hair:'h2',extras:'x1'},
+  colors:{skin:'#f5c8a0',hair:'#3d2b1f',iris:'#4a3728',lips:'#e8908a',ink:'#1a1714'},
+  bg:'#ffffff',
+  sketch:false,
+  sliders:{eyeY:155,eyeX:52,eyeSize:100,browY:130,noseY:195,mouthY:232,faceWidth:100,faceHeight:100},
+  activeTab:'face'
+};
+
+const SKIN_COLORS=['#fde8cc','#f5c8a0','#e8a87c','#c67c52','#8d4a2e','#5c2f1a'];
+const HAIR_COLORS=['#f5e0c0','#c8a060','#8b5e3c','#3d2b1f','#1a1a1a','#e84060','#4080e8','#40c060'];
+const IRIS_COLORS=['#4a3728','#2a4a6a','#2a6a4a','#8b5e3c','#6a3a6a','#1a1a1a'];
+const BG_COLORS  =['#ffffff','#fff8f0','#f0f4ff','#f0fff4','#fff0f4','#1a1917'];
+
+// ── COORDINATE RESOLVER ────────────────────────────────────────
+function resolvePath(tmpl) {
+  const s = state.sliders;
+  const ex1 = 170 - s.eyeX, ex2 = 170 + s.eyeX;
+  const ey = s.eyeY, by = s.browY, ny = s.noseY, my = s.mouthY;
+
+  return tmpl
+    .replace(/SKIN/g,state.colors.skin).replace(/HAIR/g,state.colors.hair)
+    .replace(/IRIS/g,state.colors.iris).replace(/LIPS/g,state.colors.lips)
+    .replace(/INK/g, state.colors.ink)
+    // EX1/EX2 compounds before bare
+    .replace(/EX1m(\d+)/g,(_,n)=>ex1 - +n).replace(/EX1p(\d+)/g,(_,n)=>ex1 + +n)
+    .replace(/EX2m(\d+)/g,(_,n)=>ex2 - +n).replace(/EX2p(\d+)/g,(_,n)=>ex2 + +n)
+    .replace(/EX1/g,ex1).replace(/EX2/g,ex2)
+    // EY
+    .replace(/EYm(\d+)/g,(_,n)=>ey - +n).replace(/EYp(\d+)/g,(_,n)=>ey + +n).replace(/EY/g,ey)
+    // BY
+    .replace(/BYm(\d+)/g,(_,n)=>by - +n).replace(/BYp(\d+)/g,(_,n)=>by + +n).replace(/BY/g,by)
+    // NY
+    .replace(/NYm(\d+)/g,(_,n)=>ny - +n).replace(/NYp(\d+)/g,(_,n)=>ny + +n).replace(/NY/g,ny)
+    // MY
+    .replace(/MYm(\d+)/g,(_,n)=>my - +n).replace(/MYp(\d+)/g,(_,n)=>my + +n).replace(/MY/g,my)
+    // GX/GY (glasses follow eye coords)
+    .replace(/GX1m(\d+)/g,(_,n)=>ex1 - +n).replace(/GX1p(\d+)/g,(_,n)=>ex1 + +n)
+    .replace(/GX2m(\d+)/g,(_,n)=>ex2 - +n).replace(/GX2p(\d+)/g,(_,n)=>ex2 + +n)
+    .replace(/GX1/g,ex1).replace(/GX2/g,ex2)
+    .replace(/GYm(\d+)/g,(_,n)=>ey - +n).replace(/GYp(\d+)/g,(_,n)=>ey + +n).replace(/GY/g,ey);
+}
+
+// ── RENDER FACE ────────────────────────────────────────────────
+function renderFace() {
+  const svg = document.getElementById('mainSvg');
+  const s = state.sliders;
+  const fw = s.faceWidth/100, fh = s.faceHeight/100, es = s.eyeSize/100;
+
+  const get = (tab) => PARTS[tab].find(p=>p.id===state.selected[tab])?.path||'';
+
+  const filterAttr = state.sketch ? 'filter="url(#sk)"' : '';
+
+  svg.innerHTML = `
+    <defs>
+      <filter id="sk" x="-10%" y="-10%" width="120%" height="120%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.022" numOctaves="4" seed="5" result="n"/>
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
+      </filter>
+    </defs>
+    <g ${filterAttr}>
+      <g transform="translate(170,170) scale(${fw},${fh}) translate(-170,-170)">
+        ${resolvePath(get('face'))}
+      </g>
+      ${resolvePath(get('hair'))}
+      <g transform="translate(170,${s.eyeY}) scale(${es}) translate(-170,-${s.eyeY})">
+        ${resolvePath(get('eyes'))}
+      </g>
+      ${resolvePath(get('brows'))}
+      ${resolvePath(get('nose'))}
+      ${resolvePath(get('mouth'))}
+      ${resolvePath(get('extras'))}
+    </g>`;
+  document.getElementById('faceCanvas').style.background = state.bg;
+}
+
+// ── PARTS PANEL ────────────────────────────────────────────────
+const TAB_LABELS = {face:'顔の形',eyes:'目のかたち',brows:'眉毛',nose:'鼻',mouth:'口',hair:'髪型',extras:'小物'};
+
+function renderPartsPanel() {
+  const panel = document.getElementById('partsPanel');
+  const tab = state.activeTab;
+  const parts = PARTS[tab]||[];
+  panel.innerHTML = `<div class="part-section">
+    <div class="part-section-label">${TAB_LABELS[tab]}</div>
+    <div class="parts-grid">${parts.map(p=>`
+      <div class="part-thumb ${state.selected[tab]===p.id?'active':''}" data-id="${p.id}" data-tab="${tab}">
+        <svg viewBox="0 0 340 340" xmlns="http://www.w3.org/2000/svg">${thumbSvg(tab,p)}</svg>
+        <span class="lbl">${p.label}</span>
+      </div>`).join('')}
+    </div></div>`;
+  panel.querySelectorAll('.part-thumb').forEach(el=>{
+    el.addEventListener('click',()=>{
+      state.selected[el.dataset.tab]=el.dataset.id;
+      renderPartsPanel(); renderFace();
+    });
+  });
+}
+
+function thumbSvg(tab, part) {
+  const t = part.path
+    .replace(/SKIN/g,'#f5c8a0').replace(/HAIR/g,'#3d2b1f')
+    .replace(/IRIS/g,'#4a3728').replace(/LIPS/g,'#e8908a').replace(/INK/g,'#1a1714');
+  if (tab==='face') return `<g transform="translate(170,170) scale(.78) translate(-170,-170)">${t}</g>`;
+  const ghost = `<ellipse cx="170" cy="175" rx="100" ry="110" fill="#f5c8a0" stroke="#ddd" stroke-width="1.5"/>`;
+  return ghost + resolveThumb(t);
+}
+
+function resolveThumb(t) {
+  const ex1=125,ex2=215,ey=170,by=148,ny=192,my=212;
+  return t
+    .replace(/EX1m(\d+)/g,(_,n)=>ex1 - +n).replace(/EX1p(\d+)/g,(_,n)=>ex1 + +n)
+    .replace(/EX2m(\d+)/g,(_,n)=>ex2 - +n).replace(/EX2p(\d+)/g,(_,n)=>ex2 + +n)
+    .replace(/EX1/g,ex1).replace(/EX2/g,ex2)
+    .replace(/EYm(\d+)/g,(_,n)=>ey - +n).replace(/EYp(\d+)/g,(_,n)=>ey + +n).replace(/EY/g,ey)
+    .replace(/BYm(\d+)/g,(_,n)=>by - +n).replace(/BYp(\d+)/g,(_,n)=>by + +n).replace(/BY/g,by)
+    .replace(/NYm(\d+)/g,(_,n)=>ny - +n).replace(/NYp(\d+)/g,(_,n)=>ny + +n).replace(/NY/g,ny)
+    .replace(/MYm(\d+)/g,(_,n)=>my - +n).replace(/MYp(\d+)/g,(_,n)=>my + +n).replace(/MY/g,my)
+    .replace(/GX1m(\d+)/g,(_,n)=>ex1 - +n).replace(/GX1p(\d+)/g,(_,n)=>ex1 + +n)
+    .replace(/GX2m(\d+)/g,(_,n)=>ex2 - +n).replace(/GX2p(\d+)/g,(_,n)=>ex2 + +n)
+    .replace(/GX1/g,ex1).replace(/GX2/g,ex2)
+    .replace(/GYm(\d+)/g,(_,n)=>ey - +n).replace(/GYp(\d+)/g,(_,n)=>ey + +n).replace(/GY/g,ey);
+}
+
+// ── CONTROLS ───────────────────────────────────────────────────
+function buildControls() {
+  const p = document.getElementById('controlsPanel');
+  p.innerHTML = `
+    <div>
+      <div class="ctrl-section-label">── 顔</div>
+      ${sl('faceWidth','横幅',60,140,'%')}${sl('faceHeight','縦幅',60,140,'%')}
+    </div>
+    <div>
+      <div class="ctrl-section-label">── 目</div>
+      ${sl('eyeY','縦位置',120,200,'px')}${sl('eyeX','目の間隔',20,80,'px')}${sl('eyeSize','サイズ',50,160,'%')}
+    </div>
+    <div>
+      <div class="ctrl-section-label">── 眉</div>
+      ${sl('browY','縦位置',100,160,'px')}
+    </div>
+    <div>
+      <div class="ctrl-section-label">── 鼻</div>
+      ${sl('noseY','縦位置',165,222,'px')}
+    </div>
+    <div>
+      <div class="ctrl-section-label">── 口</div>
+      ${sl('mouthY','縦位置',200,268,'px')}
+    </div>
+    <div>
+      <div class="ctrl-section-label">── カラー</div>
+      <div class="ctrl-label">肌</div>${colorRow('skin',SKIN_COLORS)}
+      <div class="ctrl-label" style="margin-top:.8rem">髪</div>${colorRow('hair',HAIR_COLORS)}
+      <div class="ctrl-label" style="margin-top:.8rem">瞳</div>${colorRow('iris',IRIS_COLORS)}
+    </div>`;
+  p.querySelectorAll('input[type=range]').forEach(el=>{
+    el.addEventListener('input',()=>{
+      state.sliders[el.dataset.key]=+el.value;
+      el.nextElementSibling.querySelector('.ctrl-val').textContent=el.value+el.dataset.unit;
+      renderFace();
+    });
+  });
+  p.querySelectorAll('.color-dot').forEach(el=>{
+    el.addEventListener('click',()=>{
+      state.colors[el.dataset.type]=el.dataset.c;
+      buildControls(); renderFace();
+    });
+  });
+}
+
+function sl(key,label,min,max,unit){
+  const v=state.sliders[key];
+  return `<div class="ctrl-row">
+    <div class="ctrl-label"><span>${label}</span><span class="ctrl-val">${v}${unit}</span></div>
+    <input type="range" min="${min}" max="${max}" value="${v}" data-key="${key}" data-unit="${unit}">
+  </div>`;
+}
+function colorRow(type,colors){
+  return `<div class="color-row">${colors.map(c=>`<div class="color-dot${state.colors[type]===c?' active':''}" style="background:${c}" data-type="${type}" data-c="${c}"></div>`).join('')}</div>`;
+}
+
+// ── BG DOTS ────────────────────────────────────────────────────
+function buildBgDots() {
+  const wrap = document.getElementById('bgDots');
+  wrap.className = 'color-row';
+  wrap.style.display='flex';
+  wrap.innerHTML = BG_COLORS.map(c=>`<div class="bg-dot${state.bg===c?' active':''}" style="background:${c};${c==='#1a1917'?'border-color:#555':''}" data-c="${c}"></div>`).join('');
+  wrap.querySelectorAll('.bg-dot').forEach(el=>{
+    el.addEventListener('click',()=>{state.bg=el.dataset.c;buildBgDots();renderFace();});
+  });
+}
+
+// ── TABS ───────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    state.activeTab=t.dataset.tab;
+    renderPartsPanel();
+  });
+});
+
+// ── SKETCH TOGGLE ──────────────────────────────────────────────
+document.getElementById('sketchBtn').addEventListener('click',function(){
+  state.sketch=!state.sketch;
+  this.textContent=`手書き ${state.sketch?'ON':'OFF'}`;
+  this.classList.toggle('on',state.sketch);
+  renderFace();
+});
+
+// ── RANDOM ─────────────────────────────────────────────────────
+document.getElementById('randomBtn').addEventListener('click',()=>{
+  Object.keys(PARTS).forEach(tab=>{
+    const a=PARTS[tab];
+    state.selected[tab]=a[Math.floor(Math.random()*a.length)].id;
+  });
+  state.colors.skin=SKIN_COLORS[Math.floor(Math.random()*SKIN_COLORS.length)];
+  state.colors.hair=HAIR_COLORS[Math.floor(Math.random()*HAIR_COLORS.length)];
+  state.colors.iris=IRIS_COLORS[Math.floor(Math.random()*IRIS_COLORS.length)];
+  state.sliders.eyeY=138+Math.floor(Math.random()*30);
+  state.sliders.eyeX=34+Math.floor(Math.random()*32);
+  state.sliders.browY=116+Math.floor(Math.random()*24);
+  state.sliders.noseY=174+Math.floor(Math.random()*30);
+  state.sliders.mouthY=214+Math.floor(Math.random()*30);
+  renderPartsPanel(); buildControls(); renderFace();
+});
+
+// ── RESET ──────────────────────────────────────────────────────
+document.getElementById('resetBtn').addEventListener('click',()=>{
+  state.selected={face:'f1',eyes:'e1',brows:'b1',nose:'n1',mouth:'m1',hair:'h2',extras:'x1'};
+  state.colors={skin:'#f5c8a0',hair:'#3d2b1f',iris:'#4a3728',lips:'#e8908a',ink:'#1a1714'};
+  state.sliders={eyeY:155,eyeX:52,eyeSize:100,browY:130,noseY:195,mouthY:232,faceWidth:100,faceHeight:100};
+  state.bg='#ffffff'; state.sketch=false;
+  document.getElementById('sketchBtn').textContent='手書き OFF';
+  document.getElementById('sketchBtn').classList.remove('on');
+  renderPartsPanel(); buildControls(); buildBgDots(); renderFace();
+});
+
+// ── SAVE PNG ───────────────────────────────────────────────────
+document.getElementById('saveBtn').addEventListener('click',()=>{
+  const svgEl=document.getElementById('mainSvg');
+  const serialized=new XMLSerializer().serializeToString(svgEl);
+  const canvas=document.createElement('canvas');
+  canvas.width=680; canvas.height=680;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle=state.bg;
+  ctx.beginPath(); ctx.arc(340,340,340,0,Math.PI*2); ctx.fill();
+  const img=new Image();
+  const blob=new Blob([serialized],{type:'image/svg+xml'});
+  const url=URL.createObjectURL(blob);
+  img.onload=()=>{
+    ctx.drawImage(img,0,0,680,680);
+    const a=document.createElement('a');
+    a.download=`nigaoe_${Date.now()}.png`;
+    a.href=canvas.toDataURL('image/png');
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+  img.src=url;
+});
+
+// ── INIT ───────────────────────────────────────────────────────
+renderPartsPanel();
+buildControls();
+buildBgDots();
+renderFace();
+</script>
+</body>
+</html>

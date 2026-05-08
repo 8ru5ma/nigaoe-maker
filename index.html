@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>にがおえメーカー</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f3f0;--surf:#fff;--bd:#e4dfd8;--bd2:#ccc7bf;
+  --tx:#1a1714;--mu:#8a8278;--acc:#1a1714;
+}
+body{background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,'Hiragino Kaku Gothic ProN',sans-serif;height:100vh;overflow:hidden}
+#root{height:100vh;display:flex;flex-direction:column}
+
+.hdr{height:50px;background:var(--surf);border-bottom:1.5px solid var(--bd);display:flex;align-items:center;padding:0 16px;gap:10px;flex-shrink:0}
+.logo{font-size:15px;font-weight:700;flex:1}
+.logo span{color:var(--mu);font-weight:400;font-size:12px}
+.hdr-r{display:flex;gap:6px;align-items:center}
+.btn{padding:5px 12px;border:1.5px solid var(--bd2);background:var(--surf);color:var(--tx);font-family:inherit;font-size:12px;font-weight:600;border-radius:7px;cursor:pointer;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;gap:4px;transition:all .15s}
+.btn:hover{background:var(--bg);border-color:var(--tx)}
+.btn.p{background:var(--acc);color:#fff;border-color:var(--acc)}
+.btn.p:hover{background:#3a2f28}
+
+.cat-bar{height:48px;background:var(--surf);border-bottom:1.5px solid var(--bd);display:flex;padding:0 8px;overflow-x:auto;scrollbar-width:none;flex-shrink:0}
+.cat-bar::-webkit-scrollbar{display:none}
+.cat-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:0 14px;border:none;background:none;cursor:pointer;font-family:inherit;font-size:11px;color:var(--mu);border-bottom:2.5px solid transparent;margin-bottom:-1px;white-space:nowrap;transition:all .15s;flex-shrink:0;font-weight:600}
+.cat-btn:hover{color:var(--tx)}
+.cat-btn.on{color:var(--acc);border-bottom-color:var(--acc)}
+.cat-count{font-size:9px;background:var(--bd);border-radius:999px;padding:1px 5px;color:var(--mu);margin-left:2px}
+.cat-btn.on .cat-count{background:var(--acc);color:#fff}
+
+.main{flex:1;display:grid;grid-template-columns:1fr 1fr;overflow:hidden}
+
+/* Preview */
+.prev{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px;background:var(--bg);background-image:radial-gradient(circle,#d8d3cc 1px,transparent 1px);background-size:22px 22px}
+.face-frame{position:relative;border-radius:50%;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.12),0 0 0 1px var(--bd);background:#fff;flex-shrink:0}
+.face-frame svg{display:block}
+.skin-row{display:flex;gap:6px;align-items:center}
+.skin-lbl{font-size:11px;color:var(--mu);font-weight:600}
+.swatch{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2.5px solid transparent;transition:all .15s;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.swatch:hover{transform:scale(1.12)}
+.swatch.on{border-color:var(--acc);box-shadow:0 0 0 2px var(--surf),0 0 0 4px var(--acc)}
+.prev-acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+
+/* Right panel */
+.rpan{background:var(--surf);border-left:1.5px solid var(--bd);display:flex;flex-direction:column;overflow:hidden}
+.stabs{display:flex;border-bottom:1.5px solid var(--bd);padding:0 10px;flex-shrink:0}
+.stab{padding:8px 12px;font-size:12px;font-family:inherit;border:none;background:none;cursor:pointer;color:var(--mu);border-bottom:2px solid transparent;margin-bottom:-1.5px;transition:all .15s;font-weight:600}
+.stab:hover{color:var(--tx)}
+.stab.on{color:var(--acc);border-bottom-color:var(--acc)}
+.pcontent{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--bd) transparent}
+
+.pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:10px}
+.pcard{border:2px solid var(--bd);border-radius:10px;background:var(--bg);cursor:pointer;overflow:hidden;aspect-ratio:340/400;position:relative;transition:all .15s}
+.pcard:hover{border-color:var(--bd2);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.pcard.on{border-color:var(--acc);background:#fff}
+.pcard img{width:100%;height:100%;object-fit:contain;display:block}
+.pcard .plbl{position:absolute;bottom:3px;left:0;right:0;text-align:center;font-size:9px;color:var(--mu);font-weight:600;pointer-events:none}
+.pcard.on .plbl{color:var(--acc)}
+
+.none-card{border:2px solid var(--bd);border-radius:10px;background:var(--bg);cursor:pointer;aspect-ratio:340/400;position:relative;transition:all .15s;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px}
+.none-card.on{border-color:var(--acc)}
+.none-card .nc-icon{font-size:22px;opacity:.3}
+.none-card .plbl{font-size:9px;color:var(--mu);font-weight:600}
+.none-card.on .plbl{color:var(--acc)}
+
+.empty-cat{padding:24px 16px;text-align:center;color:var(--mu);font-size:12px;line-height:1.9;grid-column:1/-1}
+.empty-cat a{color:var(--acc);font-weight:600;text-decoration:none}
+.empty-cat a:hover{text-decoration:underline}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;display:flex;align-items:center;justify-content:center}
+.modal{background:var(--surf);border-radius:14px;padding:24px;max-width:320px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,.18)}
+.modal h3{font-size:15px;font-weight:700;margin-bottom:6px}
+.modal p{font-size:12px;color:var(--mu);margin-bottom:14px;line-height:1.6}
+.modal-btns{display:flex;gap:8px;margin-bottom:10px}
+.modal-btns .btn{flex:1;justify-content:center}
+.modal-cancel{text-align:right}
+
+@media(max-width:680px){
+  body,#root{height:auto;overflow:visible}
+  .main{grid-template-columns:1fr;overflow:visible}
+  .prev{padding:12px;min-height:260px}
+  .face-frame{width:min(220px,80vw) !important}
+  .rpan{border-left:none;border-top:1.5px solid var(--bd);min-height:380px}
+  .pcontent{overflow-y:visible}
+  .pgrid{grid-template-columns:repeat(4,1fr);gap:6px;padding:8px}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script type="text/babel">
+const { useState, useEffect, useCallback } = React;
+
+// ── IndexedDB ────────────────────────────────────────────────
+const DB_NAME = 'nigaoe-db', DB_VER = 1, STORE = 'parts';
+let _db = null;
+function openDB() {
+  if (_db) return Promise.resolve(_db);
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE))
+        db.createObjectStore(STORE, {keyPath:'id', autoIncrement:true});
+    };
+    req.onsuccess = e => { _db = e.target.result; res(_db); };
+    req.onerror = rej;
+  });
+}
+async function dbGetAll() {
+  const db = await openDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(STORE, 'readonly');
+    const req = tx.objectStore(STORE).getAll();
+    req.onsuccess = () => res(req.result);
+    req.onerror = rej;
+  });
+}
+
+// ── Constants ────────────────────────────────────────────────
+const CATS = [
+  {id:'face',        label:'顔型'},
+  {id:'backHair',    label:'後ろ髪'},
+  {id:'frontHair',   label:'前髪'},
+  {id:'decoHair',    label:'装飾髪'},
+  {id:'brows',       label:'眉'},
+  {id:'eyes',        label:'目'},
+  {id:'nose',        label:'鼻'},
+  {id:'mouth',       label:'口'},
+  {id:'headAccessory', label:'頭アクセ'},
+  {id:'other',       label:'その他'},
+];
+
+// PNG layers rendered in front of face (backHair is handled separately, before face)
+const FRONT_LAYERS = ['frontHair','brows','eyes','nose','mouth','decoHair','headAccessory','other'];
+
+const SKIN_COLORS = ['#fde8cc','#f5c8a0','#e8a87c','#c67c52','#8d4a2e','#5c2f1a'];
+
+// ── Built-in face shapes (SVG, skin-color-changeable) ────────
+const INK = '#2a1f1a';
+const BUILTIN_FACES = {
+  b_round: {label:'丸顔',
+    Comp:({s})=><g>
+      <ellipse cx={170} cy={200} rx={118} ry={128} fill={s} stroke={INK} strokeWidth={2.8}/>
+      <ellipse cx={52}  cy={202} rx={16}  ry={20}  fill={s} stroke={INK} strokeWidth={2}/>
+      <ellipse cx={288} cy={202} rx={16}  ry={20}  fill={s} stroke={INK} strokeWidth={2}/>
+    </g>},
+  b_oval: {label:'卵型',
+    Comp:({s})=><g>
+      <ellipse cx={170} cy={200} rx={104} ry={138} fill={s} stroke={INK} strokeWidth={2.8}/>
+      <ellipse cx={66}  cy={202} rx={14}  ry={18}  fill={s} stroke={INK} strokeWidth={2}/>
+      <ellipse cx={274} cy={202} rx={14}  ry={18}  fill={s} stroke={INK} strokeWidth={2}/>
+    </g>},
+  b_long: {label:'面長',
+    Comp:({s})=><g>
+      <ellipse cx={170} cy={202} rx={88}  ry={146} fill={s} stroke={INK} strokeWidth={2.8}/>
+      <ellipse cx={82}  cy={205} rx={13}  ry={17}  fill={s} stroke={INK} strokeWidth={2}/>
+      <ellipse cx={258} cy={205} rx={13}  ry={17}  fill={s} stroke={INK} strokeWidth={2}/>
+    </g>},
+  b_wide: {label:'ぽっちゃり',
+    Comp:({s})=><g>
+      <ellipse cx={170} cy={198} rx={134} ry={118} fill={s} stroke={INK} strokeWidth={2.8}/>
+      <ellipse cx={36}  cy={200} rx={18}  ry={22}  fill={s} stroke={INK} strokeWidth={2}/>
+      <ellipse cx={304} cy={200} rx={18}  ry={22}  fill={s} stroke={INK} strokeWidth={2}/>
+    </g>},
+  b_slim: {label:'ほっそり',
+    Comp:({s})=><g>
+      <ellipse cx={170} cy={200} rx={86}  ry={142} fill={s} stroke={INK} strokeWidth={2.8}/>
+      <ellipse cx={84}  cy={202} rx={12}  ry={16}  fill={s} stroke={INK} strokeWidth={2}/>
+      <ellipse cx={256} cy={202} rx={12}  ry={16}  fill={s} stroke={INK} strokeWidth={2}/>
+    </g>},
+  b_sharp: {label:'シャープ',
+    Comp:({s})=><g>
+      <path d="M170 70 C232 70 285 116 283 183 C281 246 237 312 170 320 C103 312 59 246 57 183 C55 116 108 70 170 70Z"
+        fill={s} stroke={INK} strokeWidth={2.8} strokeLinejoin="round"/>
+      <ellipse cx={55}  cy={198} rx={13} ry={17} fill={s} stroke={INK} strokeWidth={2}/>
+      <ellipse cx={285} cy={198} rx={13} ry={17} fill={s} stroke={INK} strokeWidth={2}/>
+    </g>},
+};
+const DEFAULT_FACE = 'b_round';
+
+// ── App ──────────────────────────────────────────────────────
+function App() {
+  const [partsBycat, setPartsBycat] = useState({});  // { catId: [{id,label,url,...}] }
+  const [selected, setSelected]     = useState({face: DEFAULT_FACE});
+  const [skin, setSkin]             = useState('#f5c8a0');
+  const [activeCat, setActiveCat]   = useState('face');
+  const [activeTab, setActiveTab]   = useState('parts');
+  const [showSave, setShowSave]     = useState(false);
+
+  // Load parts from IndexedDB
+  const loadParts = useCallback(async () => {
+    const all = await dbGetAll();
+    const byCat = {};
+    all.forEach(p => {
+      if (!byCat[p.category]) byCat[p.category] = [];
+      byCat[p.category].push(p);
+    });
+    setPartsBycat(byCat);
+  }, []);
+
+  useEffect(() => { loadParts(); }, []);
+
+  // Listen for storage events (if admin opened in another tab)
+  useEffect(() => {
+    const onFocus = () => loadParts();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [loadParts]);
+
+  const selectPart = useCallback((cat, id) => {
+    setSelected(s => ({...s, [cat]: s[cat] === id ? null : id}));
+  }, []);
+
+  const randomize = useCallback(() => {
+    const builtinKeys = Object.keys(BUILTIN_FACES);
+    const facePngs = partsBycat.face || [];
+    const allFaces = [...builtinKeys, ...facePngs.map(p => p.id)];
+    const sel = { face: allFaces[Math.floor(Math.random() * allFaces.length)] };
+    CATS.forEach(c => {
+      if (c.id === 'face') return;
+      const list = partsBycat[c.id] || [];
+      if (list.length) sel[c.id] = list[Math.floor(Math.random() * list.length)].id;
+    });
+    setSelected(sel);
+    setSkin(SKIN_COLORS[Math.floor(Math.random() * SKIN_COLORS.length)]);
+  }, [partsBycat]);
+
+  const reset = useCallback(() => { setSelected({face: DEFAULT_FACE}); setSkin('#f5c8a0'); }, []);
+
+  // PNG export
+  const doExport = useCallback((bg) => {
+    const svgEl = document.getElementById('face-svg');
+    if (!svgEl) return;
+    const data = new XMLSerializer().serializeToString(svgEl);
+    const canvas = document.createElement('canvas');
+    const W = 680, H = 800;
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    if (bg === 'white') { ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,W,H); }
+    if (bg === 'cream') { ctx.fillStyle = '#f5f0e8'; ctx.fillRect(0,0,W,H); }
+    const img = new Image();
+    const blob = new Blob([data], {type:'image/svg+xml'});
+    const url = URL.createObjectURL(blob);
+    img.onload = () => {
+      ctx.drawImage(img, 0, 0, W, H);
+      const a = document.createElement('a');
+      a.download = `nigaoe_${Date.now()}.png`;
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+      URL.revokeObjectURL(url);
+      setShowSave(false);
+    };
+    img.src = url;
+  }, []);
+
+  const currentCatParts = partsBycat[activeCat] || [];
+  const totalParts = Object.values(partsBycat).reduce((n, a) => n + a.length, 0);
+
+  // SVG face size
+  const faceSize = 320;
+
+  return (
+    <div id="root" style={{height:'100vh',display:'flex',flexDirection:'column'}}>
+
+      {/* Header */}
+      <div className="hdr">
+        <div className="logo">にがおえ<span> Maker</span></div>
+        <div className="hdr-r">
+          <button className="btn" onClick={randomize}>ランダム</button>
+          <button className="btn" onClick={reset}>リセット</button>
+          <button className="btn p" onClick={() => setShowSave(true)}>PNG保存</button>
+          <a href="admin.html" className="btn" target="_blank" rel="noreferrer">管理画面</a>
+        </div>
+      </div>
+
+      {/* Category tabs */}
+      <div className="cat-bar">
+        {CATS.map(c => {
+          const count = (partsBycat[c.id] || []).length;
+          return (
+            <button key={c.id} className={`cat-btn${activeCat===c.id?' on':''}`}
+              onClick={() => { setActiveCat(c.id); setActiveTab('parts'); }}>
+              {c.label}
+              <span className="cat-count">{count}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Main */}
+      <div className="main">
+
+        {/* Left: SVG preview */}
+        <div className="prev">
+          <div className="face-frame" style={{width:faceSize, height:faceSize*400/340}}>
+            <svg id="face-svg" viewBox="0 0 340 400"
+              style={{width:faceSize, height:faceSize*400/340}}
+              xmlns="http://www.w3.org/2000/svg">
+
+              {/* ① 後ろ髪（最背面） */}
+              {(() => {
+                const part = (partsBycat.backHair || []).find(p => p.id === selected.backHair);
+                return part ? <image href={part.url} x={0} y={0} width={340} height={400}/> : null;
+              })()}
+
+              {/* ② 顔ベース（SVGビルトイン or カスタムPNG） */}
+              {(() => {
+                const faceId = selected.face || DEFAULT_FACE;
+                if (BUILTIN_FACES[faceId]) {
+                  const FaceComp = BUILTIN_FACES[faceId].Comp;
+                  return <FaceComp s={skin}/>;
+                }
+                const part = (partsBycat.face || []).find(p => p.id === faceId);
+                if (part) return <image href={part.url} x={0} y={0} width={340} height={400}/>;
+                const Fallback = BUILTIN_FACES[DEFAULT_FACE].Comp;
+                return <Fallback s={skin}/>;
+              })()}
+
+              {/* 首（SVG固定） */}
+              <rect x={145} y={315} width={50} height={42} fill={skin}/>
+
+              {/* ③ 前髪〜その他（顔の前面レイヤー） */}
+              {FRONT_LAYERS.map(cat => {
+                const partId = selected[cat];
+                if (!partId) return null;
+                const part = (partsBycat[cat] || []).find(p => p.id === partId);
+                if (!part) return null;
+                if (cat === 'eyes') {
+                  return (
+                    <g key="eyes">
+                      {part.leftUrl  && <image href={part.leftUrl}  x={0} y={0} width={340} height={400}/>}
+                      {part.rightUrl && <image href={part.rightUrl} x={0} y={0} width={340} height={400}/>}
+                    </g>
+                  );
+                }
+                return <image key={cat} href={part.url} x={0} y={0} width={340} height={400}/>;
+              })}
+            </svg>
+          </div>
+
+          {/* Skin color picker */}
+          <div className="skin-row">
+            <span className="skin-lbl">肌</span>
+            {SKIN_COLORS.map(c => (
+              <div key={c} className={`swatch${skin===c?' on':''}`}
+                style={{background:c}} onClick={() => setSkin(c)}/>
+            ))}
+          </div>
+
+          {totalParts === 0 && (
+            <div style={{fontSize:11,color:'var(--mu)',textAlign:'center',lineHeight:1.8}}>
+              パーツがありません<br/>
+              <a href="admin.html" target="_blank" style={{color:'var(--acc)',fontWeight:600}}>
+                管理画面
+              </a>からPNGを追加してください
+            </div>
+          )}
+        </div>
+
+        {/* Right: panel */}
+        <div className="rpan">
+          <div className="stabs">
+            <button className={`stab${activeTab==='parts'?' on':''}`} onClick={() => setActiveTab('parts')}>パーツ</button>
+            <button className={`stab${activeTab==='skin'?' on':''}`} onClick={() => setActiveTab('skin')}>肌の色</button>
+          </div>
+          <div className="pcontent">
+
+            {/* Parts tab */}
+            {activeTab === 'parts' && (
+              <div className="pgrid">
+                {/* 顔型カテゴリ：ビルトインSVG＋カスタムPNGを表示 */}
+                {activeCat === 'face' ? <>
+                  {Object.entries(BUILTIN_FACES).map(([id, shape]) => {
+                    const FC = shape.Comp;
+                    return (
+                      <div key={id} className={`pcard${selected.face===id?' on':''}`}
+                        onClick={() => selectPart('face', id)}>
+                        <svg viewBox="0 0 340 400" style={{width:'100%',height:'100%',display:'block'}}>
+                          <FC s={skin}/>
+                        </svg>
+                        <div className="plbl">{shape.label}</div>
+                      </div>
+                    );
+                  })}
+                  {(partsBycat.face || []).map(p => (
+                    <div key={p.id} className={`pcard${selected.face===p.id?' on':''}`}
+                      onClick={() => selectPart('face', p.id)}>
+                      <img src={p.url} alt={p.label} loading="lazy"/>
+                      <div className="plbl">{p.label}</div>
+                    </div>
+                  ))}
+                </> : <>
+                {/* その他カテゴリ：なし＋PNG */}
+                <div className={`none-card${!selected[activeCat]?' on':''}`}
+                  onClick={() => selectPart(activeCat, null)}>
+                  <div className="nc-icon">✕</div>
+                  <div className="plbl">なし</div>
+                </div>
+
+                {currentCatParts.length === 0 ? (
+                  <div className="empty-cat">
+                    このカテゴリにパーツがありません<br/>
+                    <a href="admin.html" target="_blank">管理画面</a>
+                    からPNGを追加してください
+                  </div>
+                ) : (
+                  currentCatParts.map(p => {
+                    const thumb = p.category === 'eyes' ? (p.rightUrl || p.url) : p.url;
+                    return (
+                      <div key={p.id}
+                        className={`pcard${selected[activeCat]===p.id?' on':''}`}
+                        onClick={() => selectPart(activeCat, p.id)}>
+                        <img src={thumb} alt={p.label} loading="lazy"/>
+                        <div className="plbl">{p.label}</div>
+                      </div>
+                    );
+                  })
+                )}
+                </>}
+              </div>
+            )}
+
+            {/* Skin color tab */}
+            {activeTab === 'skin' && (
+              <div style={{padding:'14px'}}>
+                <div style={{fontSize:11,fontWeight:600,color:'var(--mu)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:10}}>肌の色</div>
+                <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                  {SKIN_COLORS.map(c => (
+                    <div key={c} className={`swatch${skin===c?' on':''}`}
+                      style={{width:34,height:34,background:c}} onClick={() => setSkin(c)}/>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Save modal */}
+      {showSave && (
+        <div className="modal-overlay" onClick={() => setShowSave(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h3>背景を選んで保存</h3>
+            <p>PNG形式でダウンロードします</p>
+            <div className="modal-btns">
+              <button className="btn p" onClick={() => doExport('white')}>白</button>
+              <button className="btn p" onClick={() => doExport('cream')}>クリーム</button>
+              <button className="btn p" onClick={() => doExport('transparent')}>透明</button>
+            </div>
+            <div className="modal-cancel">
+              <button className="btn" onClick={() => setShowSave(false)}>キャンセル</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

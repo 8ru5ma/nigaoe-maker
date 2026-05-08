@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>パーツ管理 | にがおえメーカー</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f3f0;--surf:#fff;--bd:#e4dfd8;--bd2:#ccc7bf;
+  --tx:#1a1714;--mu:#8a8278;--acc:#1a1714;--red:#d04040;
+  --blue:#4080d0;
+}
+body{background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,'Hiragino Kaku Gothic ProN',sans-serif;min-height:100vh}
+
+header{background:var(--surf);border-bottom:1.5px solid var(--bd);padding:12px 20px;display:flex;align-items:center;gap:12px}
+.logo{font-size:15px;font-weight:700;flex:1}
+.logo span{color:var(--mu);font-weight:400;font-size:13px}
+a.btn,button.btn{padding:6px 14px;border:1.5px solid var(--bd2);background:var(--surf);color:var(--tx);font-family:inherit;font-size:13px;font-weight:600;border-radius:7px;cursor:pointer;text-decoration:none;display:inline-block;transition:all .15s}
+a.btn:hover,button.btn:hover{background:var(--bg);border-color:var(--tx)}
+button.btn-primary{background:var(--acc);color:#fff;border-color:var(--acc)}
+button.btn-primary:hover{background:#3a2f28}
+button.btn-primary:disabled{background:#aaa;border-color:#aaa;cursor:not-allowed}
+button.btn-danger{background:#fff;color:var(--red);border-color:var(--red)}
+button.btn-danger:hover{background:#fff0f0}
+
+.layout{display:grid;grid-template-columns:380px 1fr;gap:0;min-height:calc(100vh - 53px)}
+
+/* ── Upload Panel ── */
+.upload-panel{background:var(--surf);border-right:1.5px solid var(--bd);padding:20px;display:flex;flex-direction:column;gap:14px;overflow-y:auto}
+.upload-panel h2{font-size:14px;color:var(--mu);font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:12px;font-weight:600;color:var(--mu)}
+.field select,.field input[type=text]{padding:7px 10px;border:1.5px solid var(--bd);border-radius:7px;font-family:inherit;font-size:13px;background:var(--surf);color:var(--tx);width:100%}
+.field select:focus,.field input:focus{outline:none;border-color:var(--acc)}
+
+.dropzone{border:2px dashed var(--bd2);border-radius:12px;position:relative;overflow:hidden;cursor:pointer;transition:border-color .2s;background:#faf9f7;aspect-ratio:340/400}
+.dropzone:hover,.dropzone.over{border-color:var(--acc);background:#f5f3ef}
+.guide-wrap{position:absolute;inset:0;pointer-events:none}
+.guide-svg{width:100%;height:100%;position:absolute;inset:0}
+.preview-img{width:100%;height:100%;object-fit:contain;position:absolute;inset:0}
+.drop-text{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;pointer-events:none}
+.drop-text.hidden{opacity:0}
+.drop-title{font-size:13px;font-weight:600;color:var(--mu)}
+.drop-sub{font-size:11px;color:var(--bd2)}
+.file-btn{pointer-events:all;padding:5px 12px;border:1.5px solid var(--bd2);background:var(--surf);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;color:var(--tx)}
+
+.hint{font-size:11px;color:var(--mu);line-height:1.6;padding:8px 10px;background:var(--bg);border-radius:7px;border:1px solid var(--bd)}
+.hint b{color:var(--tx)}
+
+.eye-option{background:#f0f4ff;border:1.5px solid #c0d0f0;border-radius:8px;padding:10px 12px;font-size:12px;display:none;gap:8px;align-items:flex-start}
+.eye-option.show{display:flex}
+.eye-option label{display:flex;align-items:center;gap:6px;cursor:pointer}
+
+/* ── Parts List ── */
+.list-panel{padding:20px;display:flex;flex-direction:column;gap:14px;overflow-y:auto}
+.list-header{display:flex;align-items:center;gap:10px}
+.list-header h2{font-size:14px;color:var(--mu);font-weight:600;letter-spacing:.06em;text-transform:uppercase;flex:1}
+.list-header select{padding:5px 8px;border:1.5px solid var(--bd);border-radius:6px;font-family:inherit;font-size:12px;background:var(--surf)}
+
+.parts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+.part-item{background:var(--surf);border:1.5px solid var(--bd);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+.part-thumb-wrap{aspect-ratio:340/400;background:#f5f3f0;position:relative;overflow:hidden}
+.part-thumb-wrap img{width:100%;height:100%;object-fit:contain;display:block}
+.part-item-body{padding:6px 8px;display:flex;align-items:center;gap:4px}
+.part-item-label{font-size:11px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.part-item-cat{font-size:10px;color:var(--mu);margin-bottom:2px}
+.delete-btn{width:22px;height:22px;border:1px solid var(--red);border-radius:4px;background:#fff;color:var(--red);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .1s}
+.delete-btn:hover{background:var(--red);color:#fff}
+
+.empty-state{grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--mu);font-size:13px;line-height:1.8}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1714;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .3s;z-index:999}
+.toast.show{opacity:1}
+
+@media(max-width:700px){
+  .layout{grid-template-columns:1fr}
+  .upload-panel{border-right:none;border-bottom:1.5px solid var(--bd)}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">パーツ管理 <span>| にがおえメーカー</span></div>
+  <a href="index.html" class="btn">← 本体へ</a>
+</header>
+
+<div class="layout">
+
+  <!-- LEFT: upload -->
+  <div class="upload-panel">
+    <h2>パーツを追加</h2>
+
+    <div class="field">
+      <label>カテゴリ</label>
+      <select id="catSelect">
+        <option value="face">顔型（カスタム）</option>
+        <option value="backHair">後ろ髪</option>
+        <option value="frontHair">前髪</option>
+        <option value="decoHair">装飾髪・結び目</option>
+        <option value="brows">眉</option>
+        <option value="eyes">目</option>
+        <option value="nose">鼻</option>
+        <option value="mouth">口</option>
+        <option value="headAccessory">頭アクセサリー</option>
+        <option value="other">その他・オーバーレイ</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>ラベル名</label>
+      <input type="text" id="labelInput" placeholder="例：丸目、ふわふわショート"/>
+    </div>
+
+    <!-- Eye-specific option -->
+    <div class="eye-option" id="eyeOption">
+      <div>👁</div>
+      <div>
+        <div style="font-weight:600;margin-bottom:4px">目の設定</div>
+        <label><input type="radio" name="eyeSide" value="right" checked> 右目を描いた → 左目を自動生成</label><br>
+        <label style="margin-top:4px;display:flex;align-items:center;gap:6px"><input type="radio" name="eyeSide" value="both"> 左右両方を別々にアップロード</label>
+      </div>
+    </div>
+
+    <!-- Drop zone -->
+    <div class="dropzone" id="dropzone">
+      <div class="guide-wrap">
+        <svg id="guideSvg" viewBox="0 0 340 400" class="guide-svg" xmlns="http://www.w3.org/2000/svg">
+          <!-- Face outline -->
+          <ellipse cx="170" cy="195" rx="120" ry="130" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="2" stroke-dasharray="6,4"/>
+          <!-- Eye markers (shown for eyes category) -->
+          <g id="eyeGuides" style="display:none">
+            <ellipse cx="118" cy="172" rx="22" ry="15" fill="none" stroke="rgba(64,128,208,0.3)" stroke-width="1.5" stroke-dasharray="4,3"/>
+            <text x="118" y="176" text-anchor="middle" font-size="10" fill="rgba(64,128,208,0.5)">L</text>
+            <ellipse cx="222" cy="172" rx="22" ry="15" fill="none" stroke="rgba(208,80,80,0.3)" stroke-width="1.5" stroke-dasharray="4,3"/>
+            <text x="222" y="176" text-anchor="middle" font-size="10" fill="rgba(208,80,80,0.5)">R</text>
+          </g>
+          <!-- Brow markers -->
+          <g id="browGuides" style="display:none">
+            <path d="M100 148 Q118 138 136 148" fill="none" stroke="rgba(0,0,0,0.15)" stroke-width="1.5" stroke-dasharray="3,3"/>
+            <path d="M204 148 Q222 138 240 148" fill="none" stroke="rgba(0,0,0,0.15)" stroke-width="1.5" stroke-dasharray="3,3"/>
+          </g>
+          <!-- Mouth marker -->
+          <g id="mouthGuide" style="display:none">
+            <ellipse cx="170" cy="252" rx="28" ry="14" fill="none" stroke="rgba(0,0,0,0.12)" stroke-width="1.5" stroke-dasharray="4,3"/>
+          </g>
+        </svg>
+        <img id="previewImg" style="display:none;width:100%;height:100%;object-fit:contain;position:absolute;inset:0"/>
+      </div>
+      <div id="dropText" class="drop-text">
+        <div class="drop-title">PNGをここにドロップ</div>
+        <div class="drop-sub">または</div>
+        <label class="file-btn">ファイルを選ぶ<input type="file" id="fileInput" accept="image/png,image/gif,image/webp" hidden multiple></label>
+      </div>
+    </div>
+
+    <div class="hint">
+      <b>推奨：340×400px の透明背景PNG</b><br>
+      顔の座標に合わせて描いてください。別サイズでも自動でリサイズします。<br>
+      <b>目カテゴリ：</b>右目（R）を赤枠の位置に描いて保存すると、左目を自動生成します。
+    </div>
+
+    <button class="btn btn-primary" id="saveBtn" disabled>このパーツを保存</button>
+  </div>
+
+  <!-- RIGHT: parts list -->
+  <div class="list-panel">
+    <div class="list-header">
+      <h2>登録済みパーツ</h2>
+      <select id="filterCat">
+        <option value="">すべてのカテゴリ</option>
+        <option value="face">顔型（カスタム）</option>
+        <option value="backHair">後ろ髪</option>
+        <option value="frontHair">前髪</option>
+        <option value="decoHair">装飾髪</option>
+        <option value="brows">眉</option>
+        <option value="eyes">目</option>
+        <option value="nose">鼻</option>
+        <option value="mouth">口</option>
+        <option value="headAccessory">頭アクセ</option>
+        <option value="other">その他</option>
+      </select>
+    </div>
+    <div class="parts-grid" id="partsList"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── DB ────────────────────────────────────────────────────────
+const DB_NAME = 'nigaoe-db', DB_VER = 1, STORE = 'parts';
+let _db = null;
+
+function openDB() {
+  if (_db) return Promise.resolve(_db);
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE)) {
+        db.createObjectStore(STORE, {keyPath:'id', autoIncrement:true});
+      }
+    };
+    req.onsuccess = e => { _db = e.target.result; res(_db); };
+    req.onerror = rej;
+  });
+}
+
+async function dbAdd(data) {
+  const db = await openDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    const req = tx.objectStore(STORE).add(data);
+    req.onsuccess = () => res(req.result);
+    req.onerror = rej;
+  });
+}
+
+async function dbGetAll() {
+  const db = await openDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(STORE, 'readonly');
+    const req = tx.objectStore(STORE).getAll();
+    req.onsuccess = () => res(req.result);
+    req.onerror = rej;
+  });
+}
+
+async function dbDelete(id) {
+  const db = await openDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).delete(id).onsuccess = res;
+  });
+}
+
+// ── Image processing ──────────────────────────────────────────
+const W = 340, H = 400;
+
+function loadImg(src) {
+  return new Promise((res, rej) => {
+    const i = new Image();
+    i.onload = () => res(i);
+    i.onerror = rej;
+    i.src = src;
+  });
+}
+
+async function resizeToCanvas(dataUrl) {
+  const img = await loadImg(dataUrl);
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const ctx = c.getContext('2d');
+  // scale to fit, center, transparent bg
+  const scale = Math.min(W / img.width, H / img.height);
+  const x = (W - img.width * scale) / 2;
+  const y = (H - img.height * scale) / 2;
+  ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+  return c.toDataURL('image/png');
+}
+
+async function flipHorizontal(dataUrl) {
+  const img = await loadImg(dataUrl);
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const ctx = c.getContext('2d');
+  ctx.translate(W, 0);
+  ctx.scale(-1, 1);
+  ctx.drawImage(img, 0, 0, W, H);
+  return c.toDataURL('image/png');
+}
+
+function fileToDataUrl(file) {
+  return new Promise((res, rej) => {
+    const reader = new FileReader();
+    reader.onload = e => res(e.target.result);
+    reader.onerror = rej;
+    reader.readAsDataURL(file);
+  });
+}
+
+// ── State ─────────────────────────────────────────────────────
+let pendingDataUrl = null;  // processed dataUrl ready to save
+let pendingLabel = '';
+
+// ── UI elements ───────────────────────────────────────────────
+const catSelect   = document.getElementById('catSelect');
+const labelInput  = document.getElementById('labelInput');
+const eyeOption   = document.getElementById('eyeOption');
+const dropzone    = document.getElementById('dropzone');
+const dropText    = document.getElementById('dropText');
+const previewImg  = document.getElementById('previewImg');
+const saveBtn     = document.getElementById('saveBtn');
+const partsList   = document.getElementById('partsList');
+const filterCat   = document.getElementById('filterCat');
+const fileInput   = document.getElementById('fileInput');
+const eyeGuides   = document.getElementById('eyeGuides');
+const browGuides  = document.getElementById('browGuides');
+const mouthGuide  = document.getElementById('mouthGuide');
+
+// ── Category change ───────────────────────────────────────────
+catSelect.addEventListener('change', () => {
+  const cat = catSelect.value;
+  eyeOption.classList.toggle('show', cat === 'eyes');
+  eyeGuides.style.display  = cat === 'eyes'  ? '' : 'none';
+  browGuides.style.display = cat === 'brows' ? '' : 'none';
+  mouthGuide.style.display = cat === 'mouth' ? '' : 'none';
+  clearPreview();
+});
+
+function clearPreview() {
+  pendingDataUrl = null;
+  previewImg.style.display = 'none';
+  previewImg.src = '';
+  dropText.classList.remove('hidden');
+  saveBtn.disabled = true;
+}
+
+// ── Drop / File input ─────────────────────────────────────────
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('over'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('over'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropzone.classList.remove('over');
+  const files = [...e.dataTransfer.files].filter(f => f.type.startsWith('image/'));
+  if (files.length) handleFile(files[0]);
+});
+dropzone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) handleFile(fileInput.files[0]);
+  fileInput.value = '';
+});
+
+async function handleFile(file) {
+  try {
+    const raw = await fileToDataUrl(file);
+    const resized = await resizeToCanvas(raw);
+    pendingDataUrl = resized;
+    // show preview
+    previewImg.src = resized;
+    previewImg.style.display = 'block';
+    dropText.classList.add('hidden');
+    saveBtn.disabled = false;
+    // auto-fill label if empty
+    if (!labelInput.value) {
+      const name = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
+      labelInput.value = name;
+    }
+  } catch (err) {
+    showToast('画像の読み込みに失敗しました');
+    console.error(err);
+  }
+}
+
+// ── Save ──────────────────────────────────────────────────────
+saveBtn.addEventListener('click', async () => {
+  if (!pendingDataUrl) return;
+  const cat    = catSelect.value;
+  const label  = labelInput.value.trim() || '名称未設定';
+  const isEyes = cat === 'eyes';
+  const eyeSide = isEyes ? document.querySelector('[name=eyeSide]:checked')?.value : null;
+
+  try {
+    if (isEyes && eyeSide === 'right') {
+      // right eye: save right, auto-generate left (flipped)
+      const leftUrl = await flipHorizontal(pendingDataUrl);
+      await dbAdd({ category: cat, label, rightUrl: pendingDataUrl, leftUrl, addedAt: Date.now() });
+      showToast(`「${label}」を保存しました（左目を自動生成しました）`);
+    } else if (isEyes && eyeSide === 'both') {
+      // first of two uploads: store as "right" in temp
+      if (!window._eyeRightPending) {
+        window._eyeRightPending = { url: pendingDataUrl, label };
+        showToast('右目を受け付けました。次に左目をドロップしてください。');
+        clearPreview();
+        return;
+      } else {
+        const rightUrl = window._eyeRightPending.url;
+        const leftUrl  = pendingDataUrl;
+        await dbAdd({ category: cat, label: window._eyeRightPending.label, rightUrl, leftUrl, addedAt: Date.now() });
+        showToast(`「${window._eyeRightPending.label}」（左右）を保存しました`);
+        window._eyeRightPending = null;
+      }
+    } else {
+      await dbAdd({ category: cat, label, url: pendingDataUrl, addedAt: Date.now() });
+      showToast(`「${label}」を保存しました`);
+    }
+
+    clearPreview();
+    labelInput.value = '';
+    renderList();
+  } catch (err) {
+    showToast('保存に失敗しました');
+    console.error(err);
+  }
+});
+
+// ── Parts List ────────────────────────────────────────────────
+const CAT_LABELS = {
+  face:'顔型(カスタム)', backHair:'後ろ髪', frontHair:'前髪', decoHair:'装飾髪', brows:'眉',
+  eyes:'目', nose:'鼻', mouth:'口', headAccessory:'頭アクセ', other:'その他'
+};
+
+filterCat.addEventListener('change', renderList);
+
+async function renderList() {
+  const all  = await dbGetAll();
+  const cat  = filterCat.value;
+  const list = cat ? all.filter(p => p.category === cat) : all;
+
+  if (!list.length) {
+    partsList.innerHTML = '<div class="empty-state">まだパーツがありません<br>左のエリアからPNGをアップロードしてください</div>';
+    return;
+  }
+
+  partsList.innerHTML = list.map(p => {
+    const thumb = p.category === 'eyes' ? (p.rightUrl || p.url) : p.url;
+    const catLbl = CAT_LABELS[p.category] || p.category;
+    return `<div class="part-item" data-id="${p.id}">
+      <div class="part-thumb-wrap">
+        <img src="${thumb}" alt="${p.label}">
+      </div>
+      <div style="padding:6px 8px">
+        <div class="part-item-cat">${catLbl}</div>
+        <div style="display:flex;align-items:center;gap:4px">
+          <div class="part-item-label" title="${p.label}">${p.label}</div>
+          <button class="delete-btn" onclick="deletePart(${p.id})" title="削除">×</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function deletePart(id) {
+  if (!confirm('このパーツを削除しますか？')) return;
+  await dbDelete(id);
+  showToast('削除しました');
+  renderList();
+}
+
+// ── Toast ─────────────────────────────────────────────────────
+const toastEl = document.getElementById('toast');
+let toastTimer;
+function showToast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2800);
+}
+
+// ── Init ──────────────────────────────────────────────────────
+renderList();
+</script>
+</body>
+</html>

@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>似顔絵メーカー</title>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#f5f3f0;color:#1a1714;font-family:'Helvetica Neue',Arial,'Hiragino Kaku Gothic ProN',sans-serif;min-height:100vh;}
+#app-root{display:flex;flex-direction:column;min-height:100vh;}
+
+.header{background:#fff;border-bottom:1.5px solid #e4dfd8;padding:10px 18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:sticky;top:0;z-index:100;box-shadow:0 1px 6px rgba(42,31,26,.06);}
+.logo{font-size:18px;font-weight:700;letter-spacing:.04em;color:#1a1714;flex:1;min-width:110px;}
+.logo span{color:#c86060;}
+.btn{background:#fff;border:1.5px solid #e4dfd8;color:#1a1714;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;transition:all .15s;white-space:nowrap;}
+.btn:hover{background:#f5f3f0;border-color:#b0a89e;}
+.btn-primary{background:#1a1714;color:#fff;border-color:#1a1714;}
+.btn-primary:hover{background:#3a2f28;}
+.btn-active{background:#1a1714;color:#fff;border-color:#1a1714;}
+
+.cat-bar{background:#fff;border-bottom:1.5px solid #e4dfd8;overflow-x:auto;display:flex;padding:0 10px;scrollbar-width:none;white-space:nowrap;flex-shrink:0;}
+.cat-bar::-webkit-scrollbar{display:none;}
+.cat-tab{padding:10px 15px;cursor:pointer;font-size:13px;font-weight:600;color:#7a6f66;border-bottom:2.5px solid transparent;flex-shrink:0;transition:all .15s;user-select:none;}
+.cat-tab:hover{color:#1a1714;}
+.cat-tab.active{color:#1a1714;border-bottom-color:#1a1714;}
+
+.main{display:flex;flex:1;min-height:0;}
+.preview-area{flex:1;min-width:0;padding:24px;display:flex;justify-content:center;align-items:flex-start;background:#f5f3f0;}
+.preview-wrap{width:100%;max-width:380px;border-radius:16px;overflow:hidden;background:#fff;box-shadow:0 4px 24px rgba(42,31,26,.10);aspect-ratio:340/400;}
+.preview-wrap svg{width:100%;height:100%;display:block;}
+
+.panel-area{width:340px;min-width:260px;border-left:1.5px solid #e4dfd8;background:#fff;display:flex;flex-direction:column;overflow:hidden;}
+.sub-tabs{display:flex;border-bottom:1.5px solid #e4dfd8;flex-shrink:0;}
+.sub-tab{flex:1;padding:9px 4px;font-size:12px;font-weight:600;color:#7a6f66;background:none;border:none;cursor:pointer;text-align:center;border-bottom:2.5px solid transparent;margin-bottom:-1.5px;transition:all .15s;}
+.sub-tab.active{color:#1a1714;border-bottom-color:#1a1714;}
+.sub-content{flex:1;overflow-y:auto;padding:14px;}
+
+.parts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.part-thumb{background:#f5f3f0;border:2px solid transparent;border-radius:10px;cursor:pointer;overflow:hidden;aspect-ratio:1;display:flex;align-items:center;justify-content:center;transition:all .15s;position:relative;}
+.part-thumb:hover{border-color:#b0a89e;}
+.part-thumb.active{border-color:#1a1714;background:#fff;}
+.part-thumb svg{width:100%;height:100%;display:block;}
+.part-label{position:absolute;bottom:2px;left:0;right:0;text-align:center;font-size:9px;color:#7a6f66;font-weight:600;pointer-events:none;}
+
+.color-section{margin-bottom:18px;}
+.color-section-title{font-size:11px;font-weight:700;color:#7a6f66;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em;}
+.color-swatches{display:flex;flex-wrap:wrap;gap:7px;}
+.swatch{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2.5px solid transparent;transition:all .15s;flex-shrink:0;}
+.swatch:hover{transform:scale(1.15);}
+.swatch.active{border-color:#1a1714;box-shadow:0 0 0 2px #fff inset;}
+
+.adj-section{margin-bottom:16px;}
+.adj-label{font-size:12px;font-weight:700;color:#3a2f28;margin-bottom:8px;}
+.adj-row{display:flex;align-items:center;gap:7px;margin-bottom:8px;}
+.adj-name{font-size:11px;color:#7a6f66;width:60px;flex-shrink:0;}
+.adj-slider{flex:1;accent-color:#1a1714;cursor:pointer;}
+.adj-nudge{width:26px;height:26px;border:1.5px solid #e4dfd8;background:#fff;border-radius:5px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;color:#1a1714;line-height:1;}
+.adj-nudge:hover{background:#f5f3f0;}
+.adj-val{font-size:10px;color:#b0a89e;width:26px;text-align:right;flex-shrink:0;}
+
+.bg-row{display:flex;gap:10px;margin-bottom:8px;align-items:center;flex-wrap:wrap;}
+.bg-opt{width:32px;height:32px;border-radius:6px;border:2.5px solid #e4dfd8;cursor:pointer;transition:all .15s;flex-shrink:0;}
+.bg-opt:hover{transform:scale(1.08);}
+.bg-opt.active{border-color:#1a1714;}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:200;display:flex;align-items:center;justify-content:center;}
+.modal{background:#fff;border-radius:14px;padding:28px;max-width:340px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,.18);}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:8px;}
+.modal p{font-size:13px;color:#7a6f66;margin-bottom:18px;}
+.modal-btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.modal-btns .btn{flex:1;}
+.modal-cancel{text-align:right;}
+
+.no-adj{color:#b0a89e;font-size:13px;padding:8px 0;}
+
+@media(max-width:680px){
+  .main{flex-direction:column;}
+  .panel-area{width:100%;min-width:0;border-left:none;border-top:1.5px solid #e4dfd8;}
+  .preview-area{padding:14px;}
+  .preview-wrap{max-width:280px;}
+}
+</style>
+</head>
+<body>
+<div id="app-root"></div>
+<script type="text/babel">
+const {useState, useCallback, useMemo, useRef} = React;
+
+// ── Color Palettes ────────────────────────────────────────────────────────
+const SKIN_COLORS=['#fde8cc','#f5c8a0','#e8a87c','#c67c52','#8d4a2e','#5c2f1a'];
+const HAIR_COLORS=['#f5e0b8','#c8a060','#8b5e3c','#3d2b1f','#1a1a1a','#e84080','#4080e8','#48c060','#e06030','#a040c0'];
+const IRIS_COLORS=['#4a3728','#7a5530','#2a4a6a','#3a7a6a','#6a3a6a','#8a8a8a'];
+const LIPS_COLORS=['#e8908a','#d47060','#c04050','#e0a070'];
+const ACC_COLORS=['#c86060','#d4a040','#60a860','#6080c8','#c060a0','#808080'];
+
+const INITIAL={
+  selected:{face:'f1',backHair:'bh1',frontHair:'fh2',decoHair:'dh1',brows:'br1',eyes:'e1',nose:'n1',mouth:'m1',headAccessory:'ha1'},
+  colors:{skin:'#f5c8a0',backHair:'#3d2b1f',frontHair:'#3d2b1f',decoHair:'#3d2b1f',iris:'#4a3728',lips:'#e8908a',ink:'#2a1f1a',accent:'#c86060'},
+  adj:{eyeY:172,eyeX:52,eyeSize:100,browY:148,browAngle:0,noseY:215,noseSize:100,mouthY:252,mouthSize:100,faceW:100,faceH:100},
+  bg:'white',sketch:false
+};
+const THUMB_ADJ={eyeY:172,eyeX:52,eyeSize:100,browY:148,browAngle:0,noseY:215,noseSize:100,mouthY:252,mouthSize:100,faceW:100,faceH:100};
+const THUMB_COLORS={skin:'#f5c8a0',backHair:'#3d2b1f',frontHair:'#3d2b1f',decoHair:'#3d2b1f',iris:'#4a3728',lips:'#e8908a',ink:'#2a1f1a',accent:'#c86060'};
+
+const CATS=[
+  {id:'face',label:'顔型'},{id:'backHair',label:'後ろ髪'},{id:'frontHair',label:'前髪'},
+  {id:'decoHair',label:'装飾髪'},{id:'brows',label:'眉'},{id:'eyes',label:'目'},
+  {id:'nose',label:'鼻'},{id:'mouth',label:'口'},{id:'headAccessory',label:'頭アクセ'},
+];
+
+// ── Face Shapes ───────────────────────────────────────────────────────────
+const FACE_SHAPES={
+  f1:{label:'丸顔',Comp:({skin,ink,adj})=>{
+    const sx=adj.faceW/100, sy=adj.faceH/100;
+    return <g transform={`translate(170,200) scale(${sx},${sy}) translate(-170,-200)`}>
+      <ellipse cx={140} cy={196} rx={19} ry={13} fill={skin} stroke={ink} strokeWidth={2.8} strokeLinecap="round"/>
+      <ellipse cx={200} cy={196} rx={19} ry={13} fill={skin} stroke={ink} strokeWidth={2.8} strokeLinecap="round"/>
+      <ellipse cx={170} cy={195} rx={120} ry={130} fill={skin} stroke={ink} strokeWidth={2.8} strokeLinejoin="round"/>
+    </g>;
+  }},
+  f2:{label:'卵型',Comp:({skin,ink,adj})=>{
+    const sx=adj.faceW/100, sy=adj.faceH/100;
+    return <g transform={`translate(170,200) scale(${sx},${sy}) translate(-170,-200)`}>
+      <ellipse cx={142} cy={193} rx={17} ry={12} fill={skin} stroke={ink} strokeWidth={2.8} strokeLinecap="round"/>
+      <ellipse cx={198} cy={193} rx={17} ry={12} fill={skin} stroke={ink} strokeWidth={2.8} strokeLinecap="round"/>
+      <ellipse cx={170} cy={195} rx={105} ry={138} fill={skin} stroke={ink} strokeWidth={2.8} strokeLinejoin="round"/>
+    </g>;
+  }},
+  f3:{label:'面長',Comp:({skin,ink,adj})=>{
+    const sx=adj.faceW/100, sy=adj.faceH/100;
+    return <g transform={`translate(170,200) scale(${sx},${sy}) translate(-170,-200)`}>
+      <ellipse cx={144} cy={194} rx={14} ry={10} fill={skin} stroke={ink} strokeWidth={2.8} strokeLinecap="round"/>
+      <ellipse cx={196} cy={194} rx={14} ry={10} fill={skin} stroke={ink} strokeWidth={2.8} strokeLinecap="round"/>
+      <ellipse cx={170} cy={196} rx={88} ry={148} fill={skin} stroke={ink} strokeWidth={2.8} strokeLinejoin="round"/>
+    </g>;
+  }},
+  f4:{label:'ベース型',Comp:({skin,ink,adj})=>{
+    const sx=adj.faceW/100, sy=adj.faceH/100;
+    return <g transform={`translate(170,200) scale(${sx},${sy}) translate(-170,-200)`}>
+      <ellipse cx={138} cy={190} rx={18} ry={12} fill={skin} stroke={ink} strokeWidth={2.8} strokeLinecap="round"/>
+      <ellipse cx={202} cy={190} rx={18} ry={12} fill={skin} stroke={ink} strokeWidth={2.8} strokeLinecap="round"/>
+      <path d="M60 160 C58 100 108 68 170 68 C232 68 282 100 280 160 C282 202 268 242 240 270 C220 292 200 312 170 318 C140 312 120 292 100 270 C72 242 58 202 60 160Z" fill={skin} stroke={ink} strokeWidth={2.8} strokeLinejoin="round"/>
+    </g>;
+  }},
+  f5:{label:'ほっぺ丸',Comp:({skin,ink,adj})=>{
+    const sx=adj.faceW/100, sy=adj.faceH/100;
+    return <g transform={`translate(170,200) scale(${sx},${sy}) translate(-170,-200)`}>
+      <ellipse cx={136} cy={197} rx={20} ry={14} fill={skin} stroke={ink} strokeWidth={2.8} strokeLinecap="round"/>
+      <ellipse cx={204} cy={197} rx={20} ry={14} fill={skin} stroke={ink} strokeWidth={2.8} strokeLinecap="round"/>
+      <ellipse cx={170} cy={195} rx={132} ry={122} fill={skin} stroke={ink} strokeWidth={2.8} strokeLinejoin="round"/>
+    </g>;
+  }},
+  f6:{label:'シャープ',Comp:({skin,ink,adj})=>{
+    const sx=adj.faceW/100, sy=adj.faceH/100;
+    return <g transform={`translate(170,200) scale(${sx},${sy}) translate(-170,-200)`}>
+      <ellipse cx={143} cy={190} rx={14} ry={10} fill={skin} stroke={ink} strokeWidth={2.8} strokeLinecap="round"/>
+      <ellipse cx={197} cy={190} rx={14} ry={10} fill={skin} stroke={ink} strokeWidth={2.8} strokeLinecap="round"/>
+      <path d="M78 140 C72 90 112 62 170 62 C228 62 268 90 262 140 C264 182 255 226 238 260 C218 294 196 328 170 336 C144 328 122 294 102 260 C85 226 76 182 78 140Z" fill={skin} stroke={ink} strokeWidth={2.8} strokeLinejoin="round"/>
+    </g>;
+  }},
+};
+
+// ── Back Hair ─────────────────────────────────────────────────────────────
+const BACK_HAIR={
+  bh1:{label:'なし',Comp:()=>null},
+  bh2:{label:'ショート',Comp:({hair,ink})=>
+    <path d="M62 162 C56 78 106 46 170 46 C234 46 284 78 278 162 C282 188 276 210 270 226 L264 210 C258 228 250 242 242 246 L238 222 C228 244 216 254 204 256 L200 232 C190 252 180 260 170 260 C160 260 150 252 140 232 L136 256 C124 254 112 244 102 222 L98 246 C90 242 82 228 76 210 L70 226 C64 210 58 188 62 162Z" fill={hair} stroke={ink} strokeWidth={2.8} strokeLinejoin="round" strokeLinecap="round"/>
+  },
+  bh3:{label:'ボブ',Comp:({hair,ink})=>
+    <path d="M58 158 C52 70 106 38 170 38 C234 38 288 70 282 158 C286 210 278 252 266 274 C252 296 236 304 220 305 C208 306 196 300 186 288 C181 282 176 276 170 273 C164 276 159 282 154 288 C144 300 132 306 120 305 C104 304 88 296 74 274 C62 252 54 210 58 158Z" fill={hair} stroke={ink} strokeWidth={2.8} strokeLinejoin="round" strokeLinecap="round"/>
+  },
+  bh4:{label:'ミディアム',Comp:({hair,ink})=>
+    <path d="M56 156 C50 66 106 34 170 34 C234 34 290 66 284 156 C288 215 280 268 266 298 C250 332 230 354 210 368 C196 377 184 380 170 380 C156 380 144 377 130 368 C110 354 90 332 74 298 C60 268 52 215 56 156Z" fill={hair} stroke={ink} strokeWidth={2.8} strokeLinejoin="round" strokeLinecap="round"/>
+  },
+  bh5:{label:'ロング',Comp:({hair,ink})=>
+    <path d="M54 153 C48 62 104 30 170 30 C236 30 292 62 286 153 C290 220 280 280 264 320 C246 364 222 396 200 414 C188 424 178 428 170 428 C162 428 152 424 140 414 C118 396 94 364 76 320 C60 280 50 220 54 153Z" fill={hair} stroke={ink} strokeWidth={2.8} strokeLinejoin="round" strokeLinecap="round"/>
+  },
+  bh6:{label:'超ロング',Comp:({hair,ink})=>
+    <path d="M52 150 C46 58 102 26 170 26 C238 26 294 58 288 150 C292 222 282 288 264 334 C244 384 216 426 194 458 C184 476 176 486 170 488 C164 486 156 476 146 458 C124 426 96 384 76 334 C58 288 48 222 52 150Z" fill={hair} stroke={ink} strokeWidth={2.8} strokeLinejoin="round" strokeLinecap="round"/>
+  },
+};
+
+// ── Front Hair ────────────────────────────────────────────────────────────
+const FRONT_HAIR={
+  fh1:{label:'なし',Comp:()=>null},
+  fh2:{label:'パッツン',Comp:({hair,ink})=>
+    <path d="M58 150 C58 88 104 40 170 40 C236 40 282 88 282 150 L278 158 C272 136 260 120 244 112 C228 104 210 106 200 118 C192 128 186 136 170 136 C154 136 148 128 140 118 C130 106 112 104 96 112 C80 120 68 136 62 158 Z" fill={hair} stroke={ink} strokeWidth={2.8} strokeLinejoin="round" strokeLinecap="round"/>
+  },
+  fh3:{label:'斜め',Comp:({hair,ink})=>
+    <path d="M58 150 C58 88 104 40 170 40 C236 40 282 88 282 150 L278 158 C272 136 260 120 244 112 C228 104 208 104 194 116 C178 130 168 148 156 155 C144 160 130 162 118 158 C104 152 86 140 74 136 C66 132 60 140 58 150Z" fill={hair} stroke={ink} strokeWidth={2.8} strokeLinejoin="round" strokeLinecap="round"/>
+  },
+  fh4:{label:'センター分け',Comp:({hair,ink})=>
+    <path d="M58 150 C58 88 104 40 170 40 C236 40 282 88 282 150 L278 156 C272 134 258 116 240 110 C222 104 206 108 196 122 C188 132 182 144 170 147 C158 144 152 132 144 122 C134 108 118 104 100 110 C82 116 68 134 62 156 Z" fill={hair} stroke={ink} strokeWidth={2.8} strokeLinejoin="round" strokeLinecap="round"/>
+  },
+  fh5:{label:'M字',Comp:({hair,ink})=>
+    <path d="M58 150 C58 88 104 40 170 40 C236 40 282 88 282 150 L278 158 C268 136 258 118 244 110 C228 102 210 106 200 120 C192 132 188 140 180 143 C176 145 174 141 170 139 C166 141 164 145 160 143 C152 140 148 132 140 120 C130 106 112 102 96 110 C82 118 72 136 62 158Z" fill={hair} stroke={ink} strokeWidth={2.8} strokeLinejoin="round" strokeLinecap="round"/>
+  },
+  fh6:{label:'うぶ毛',Comp:({hair,ink})=><>
+    <path d="M60 152 C60 90 104 42 170 42 C236 42 280 90 280 152 L276 158 C270 136 256 120 240 112 C224 104 210 108 202 120 C194 130 188 138 170 138 C152 138 146 130 138 120 C130 108 116 104 100 112 C84 120 70 136 64 158Z" fill={hair} stroke={ink} strokeWidth={2.8} strokeLinejoin="round" strokeLinecap="round"/>
+    <path d="M170 38 C168 26 172 16 170 12" stroke={hair} strokeWidth={3.2} strokeLinecap="round" fill="none"/>
+    <path d="M156 40 C150 28 148 18 144 14" stroke={hair} strokeWidth={2.8} strokeLinecap="round" fill="none"/>
+    <path d="M184 40 C190 28 192 18 196 14" stroke={hair} strokeWidth={2.8} strokeLinecap="round" fill="none"/>
+    <path d="M143 44 C134 32 126 22 120 20" stroke={hair} strokeWidth={2.2} strokeLinecap="round" fill="none"/>
+    <path d="M197 44 C206 32 214 22 220 20" stroke={hair} strokeWidth={2.2} strokeLinecap="round" fill="none"/>
+  </>},
+  fh7:{label:'くせ毛',Comp:({hair,ink})=><>
+    <path d="M60 152 C60 90 104 42 170 42 C236 42 280 90 280 152 L276 158 C268 138 260 122 246 114 C232 106 216 108 206 120 C198 128 194 136 186 141 C182 144 178 142 174 140 C172 138 170 136 168 136 C166 136 164 138 162 140 C158 142 154 144 150 141 C142 136 138 128 130 120 C120 108 104 106 90 114 C76 122 68 138 60 158Z" fill={hair} stroke={ink} strokeWidth={2.8} strokeLinejoin="round" strokeLinecap="round"/>
+    <path d="M152 48 C146 36 142 26 138 24 C142 30 140 40 138 46" stroke={hair} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+    <path d="M166 43 C163 30 165 20 163 16 C167 23 169 34 167 42" stroke={hair} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+    <path d="M182 43 C185 30 183 20 185 16 C181 23 179 34 181 42" stroke={hair} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+    <path d="M197 48 C204 36 208 26 212 24 C208 30 210 40 212 46" stroke={hair} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+  </>},
+};
+
+// ── Deco Hair ─────────────────────────────────────────────────────────────
+const DECO_HAIR={
+  dh1:{label:'なし',Comp:()=>null},
+  dh2:{label:'ツインテ',Comp:({hair,ink})=><>
+    <circle cx={95} cy={93} r={22} fill={hair} stroke={ink} strokeWidth={2.8}/>
+    <circle cx={245} cy={93} r={22} fill={hair} stroke={ink} strokeWidth={2.8}/>
+    <path d="M87 114 C79 140 71 172 67 200 C65 218 67 234 75 244 C83 254 93 250 97 236 C101 222 99 200 97 178 C99 198 101 220 105 234 C109 248 120 252 126 242 C132 230 130 208 122 188 C116 170 108 148 102 128Z" fill={hair} stroke={ink} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round"/>
+    <path d="M253 114 C261 140 269 172 273 200 C275 218 273 234 265 244 C257 254 247 250 243 236 C239 222 241 200 243 178 C241 198 239 220 235 234 C231 248 220 252 214 242 C208 230 210 208 218 188 C224 170 232 148 238 128Z" fill={hair} stroke={ink} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round"/>
+  </>},
+  dh3:{label:'お団子1つ',Comp:({hair,ink,accent})=><>
+    <circle cx={170} cy={50} r={30} fill={hair} stroke={ink} strokeWidth={2.8}/>
+    <ellipse cx={170} cy={78} rx={16} ry={8} fill={accent} stroke={ink} strokeWidth={2.5}/>
+    <path d="M154 75 C154 72 162 68 170 68 C178 68 186 72 186 75" fill="none" stroke={ink} strokeWidth={2} strokeLinecap="round"/>
+  </>},
+  dh4:{label:'お団子2つ',Comp:({hair,ink,accent})=><>
+    <circle cx={110} cy={72} r={24} fill={hair} stroke={ink} strokeWidth={2.8}/>
+    <circle cx={230} cy={72} r={24} fill={hair} stroke={ink} strokeWidth={2.8}/>
+    <ellipse cx={110} cy={94} rx={13} ry={7} fill={accent} stroke={ink} strokeWidth={2.5}/>
+    <ellipse cx={230} cy={94} rx={13} ry={7} fill={accent} stroke={ink} strokeWidth={2.5}/>
+  </>},
+  dh5:{label:'ポニーテール',Comp:({hair,ink,accent})=><>
+    <ellipse cx={170} cy={62} rx={18} ry={10} fill={accent} stroke={ink} strokeWidth={2.5}/>
+    <path d="M152 62 C152 58 160 54 170 54 C180 54 188 58 188 62" fill="none" stroke={ink} strokeWidth={2} strokeLinecap="round"/>
+    <path d="M160 72 C155 102 148 142 145 182 C142 222 144 262 148 292 C152 318 160 334 170 338 C180 334 188 318 192 292 C196 262 198 222 195 182 C192 142 185 102 180 72Z" fill={hair} stroke={ink} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round"/>
+  </>},
+  dh6:{label:'三つ編み',Comp:({hair,ink})=><>
+    <path d="M156 108 C151 130 149 152 151 174 C153 196 156 212 156 232 C156 252 151 268 149 283 C147 296 150 304 157 306 C164 304 170 293 170 278 C170 293 176 304 183 306 C190 304 193 296 191 283 C189 268 184 252 184 232 C184 212 187 196 189 174 C191 152 189 130 184 108 C177 113 174 117 170 118 C166 117 163 113 156 108Z" fill={hair} stroke={ink} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round"/>
+    <line x1={153} y1={150} x2={187} y2={157} stroke={ink} strokeWidth={2} strokeLinecap="round"/>
+    <line x1={151} y1={182} x2={189} y2={187} stroke={ink} strokeWidth={2} strokeLinecap="round"/>
+    <line x1={153} y1={214} x2={187} y2={217} stroke={ink} strokeWidth={2} strokeLinecap="round"/>
+    <line x1={155} y1={246} x2={185} y2={248} stroke={ink} strokeWidth={2} strokeLinecap="round"/>
+  </>},
+  dh7:{label:'ハーフアップ',Comp:({hair,ink,accent})=><>
+    <path d="M106 138 C112 130 122 124 132 122 C147 120 162 122 170 124 C178 122 193 120 208 122 C218 124 228 130 234 138" fill="none" stroke={hair} strokeWidth={8} strokeLinecap="round"/>
+    <ellipse cx={170} cy={124} rx={17} ry={9} fill={accent} stroke={ink} strokeWidth={2.5}/>
+    <path d="M153 122 C153 118 161 114 170 114 C179 114 187 118 187 122" fill="none" stroke={ink} strokeWidth={2} strokeLinecap="round"/>
+  </>},
+};
+
+// ── Brow Shapes ───────────────────────────────────────────────────────────
+const BROW_SHAPES={
+  br1:{label:'普通',
+    Left:({cx,cy,ink})=><path d={`M${cx-20} ${cy+3} C${cx-14} ${cy-6} ${cx-2} ${cy-6} ${cx+10} ${cy}`} fill="none" stroke={ink} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"/>,
+    Right:({cx,cy,ink})=><path d={`M${cx-10} ${cy} C${cx+2} ${cy-6} ${cx+14} ${cy-6} ${cx+20} ${cy+3}`} fill="none" stroke={ink} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"/>,
+  },
+  br2:{label:'太め',
+    Left:({cx,cy,ink})=><path d={`M${cx-20} ${cy+4} C${cx-14} ${cy-7} ${cx-2} ${cy-8} ${cx+10} ${cy}`} fill="none" stroke={ink} strokeWidth={5.5} strokeLinecap="round" strokeLinejoin="round"/>,
+    Right:({cx,cy,ink})=><path d={`M${cx-10} ${cy} C${cx+2} ${cy-8} ${cx+14} ${cy-7} ${cx+20} ${cy+4}`} fill="none" stroke={ink} strokeWidth={5.5} strokeLinecap="round" strokeLinejoin="round"/>,
+  },
+  br3:{label:'細め',
+    Left:({cx,cy,ink})=><path d={`M${cx-18} ${cy+2} C${cx-12} ${cy-3} ${cx} ${cy-4} ${cx+10} ${cy-1}`} fill="none" stroke={ink} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"/>,
+    Right:({cx,cy,ink})=><path d={`M${cx-10} ${cy-1} C${cx} ${cy-4} ${cx+12} ${cy-3} ${cx+18} ${cy+2}`} fill="none" stroke={ink} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"/>,
+  },
+  br4:{label:'ハの字',
+    Left:({cx,cy,ink})=><path d={`M${cx-18} ${cy-5} C${cx-10} ${cy-2} ${cx-2} ${cy+2} ${cx+10} ${cy+6}`} fill="none" stroke={ink} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"/>,
+    Right:({cx,cy,ink})=><path d={`M${cx-10} ${cy+6} C${cx+2} ${cy+2} ${cx+10} ${cy-2} ${cx+18} ${cy-5}`} fill="none" stroke={ink} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"/>,
+  },
+  br5:{label:'への字',
+    Left:({cx,cy,ink})=><path d={`M${cx-20} ${cy+5} C${cx-10} ${cy+4} ${cx} ${cy-2} ${cx+10} ${cy-5}`} fill="none" stroke={ink} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"/>,
+    Right:({cx,cy,ink})=><path d={`M${cx-10} ${cy-5} C${cx} ${cy-2} ${cx+10} ${cy+4} ${cx+20} ${cy+5}`} fill="none" stroke={ink} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"/>,
+  },
+  br6:{label:'一文字',
+    Left:({cx,cy,ink})=><line x1={cx-20} y1={cy} x2={cx+10} y2={cy} stroke={ink} strokeWidth={3.5} strokeLinecap="round"/>,
+    Right:({cx,cy,ink})=><line x1={cx-10} y1={cy} x2={cx+20} y2={cy} stroke={ink} strokeWidth={3.5} strokeLinecap="round"/>,
+  },
+  br7:{label:'アーチ',
+    Left:({cx,cy,ink})=><path d={`M${cx-20} ${cy+7} C${cx-16} ${cy-9} ${cx} ${cy-14} ${cx+10} ${cy+1}`} fill="none" stroke={ink} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"/>,
+    Right:({cx,cy,ink})=><path d={`M${cx-10} ${cy+1} C${cx} ${cy-14} ${cx+16} ${cy-9} ${cx+20} ${cy+7}`} fill="none" stroke={ink} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"/>,
+  },
+};
+
+// ── Eye Shapes ────────────────────────────────────────────────────────────
+const EYE_SHAPES={
+  e1:{label:'丸目',
+    Left:({cx,cy,iris,ink})=><>
+      <path d={`M${cx-14} ${cy+1} C${cx-14} ${cy-13} ${cx+14} ${cy-13} ${cx+14} ${cy+1} C${cx+14} ${cy+11} ${cx-14} ${cy+11} ${cx-14} ${cy+1}Z`} fill="#fff" stroke={ink} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"/>
+      <circle cx={cx} cy={cy} r={10} fill={iris}/>
+      <circle cx={cx} cy={cy} r={5} fill={ink}/>
+      <circle cx={cx+4} cy={cy-4} r={2.5} fill="#fff"/>
+      <path d={`M${cx-14} ${cy+1} C${cx-14} ${cy-13} ${cx+14} ${cy-13} ${cx+14} ${cy+1}`} fill="none" stroke={ink} strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round"/>
+    </>,
+    Right:({cx,cy,iris,ink})=><>
+      <path d={`M${cx-14} ${cy+1} C${cx-14} ${cy-13} ${cx+14} ${cy-13} ${cx+14} ${cy+1} C${cx+14} ${cy+11} ${cx-14} ${cy+11} ${cx-14} ${cy+1}Z`} fill="#fff" stroke={ink} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"/>
+      <circle cx={cx} cy={cy} r={10} fill={iris}/>
+      <circle cx={cx} cy={cy} r={5} fill={ink}/>
+      <circle cx={cx+4} cy={cy-4} r={2.5} fill="#fff"/>
+      <path d={`M${cx-14} ${cy+1} C${cx-14} ${cy-13} ${cx+14} ${cy-13} ${cx+14} ${cy+1}`} fill="none" stroke={ink} strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round"/>
+    </>,
+  },
+  e2:{label:'細目',
+    Left:({cx,cy,iris,ink})=><>
+      <path d={`M${cx-16} ${cy+3} C${cx-10} ${cy-8} ${cx+10} ${cy-8} ${cx+16} ${cy+3} C${cx+10} ${cy+10} ${cx-10} ${cy+10} ${cx-16} ${cy+3}Z`} fill="#fff" stroke={ink} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"/>
+      <ellipse cx={cx} cy={cy+1} rx={9} ry={7} fill={iris}/>
+      <ellipse cx={cx} cy={cy+1} rx={4.5} ry={3.5} fill={ink}/>
+      <circle cx={cx+3} cy={cy-2} r={2} fill="#fff"/>
+      <path d={`M${cx-16} ${cy+3} C${cx-10} ${cy-8} ${cx+10} ${cy-8} ${cx+16} ${cy+3}`} fill="none" stroke={ink} strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round"/>
+    </>,
+    Right:({cx,cy,iris,ink})=><>
+      <path d={`M${cx-16} ${cy+3} C${cx-10} ${cy-8} ${cx+10} ${cy-8} ${cx+16} ${cy+3} C${cx+10} ${cy+10} ${cx-10} ${cy+10} ${cx-16} ${cy+3}Z`} fill="#fff" stroke={ink} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"/>
+      <ellipse cx={cx} cy={cy+1} rx={9} ry={7} fill={iris}/>
+      <ellipse cx={cx} cy={cy+1} rx={4.5} ry={3.5} fill={ink}/>
+      <circle cx={cx+3} cy={cy-2} r={2} fill="#fff"/>
+      <path d={`M${cx-16} ${cy+3} C${cx-10} ${cy-8} ${cx+10} ${cy-8} ${cx+16} ${cy+3}`} fill="none" stroke={ink} strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round"/>
+    </>,
+  },
+  e3:{label:'タレ目',
+    Left:({cx,cy,iris,ink})=><>
+      <path d={`M${cx-16} ${cy} C${cx-12} ${cy-10} ${cx+6} ${cy-11} ${cx+16} ${cy+5} C${cx+10} ${cy+12} ${cx-10} ${cy+11} ${cx-16} ${cy}Z`} fill="#fff" stroke={ink} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"/>
+      <ellipse cx={cx+1} cy={cy+1} rx={9} ry={8} fill={iris}/>
+      <ellipse cx={cx+1} cy={cy+1} rx={4.5} ry={4} fill={ink}/>
+      <circle cx={cx+4} cy={cy-3} r={2} fill="#fff"/>
+      <path d={`M${cx-16} ${cy} C${cx-12} ${cy-10} ${cx+6} ${cy-11} ${cx+16} ${cy+5}`} fill="none" stroke={ink} strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round"/>
+    </>,
+    Right:({cx,cy,iris,ink})=><>
+      <path d={`M${cx-16} ${cy+5} C${cx-6} ${cy-11} ${cx+12} ${cy-10} ${cx+16} ${cy} C${cx+16} ${cy} ${cx+10} ${cy+12} ${cx-10} ${cy+12} ${cx-16} ${cy+5}Z`} fill="#fff" stroke={ink} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"/>
+      <ellipse cx={cx-1} cy={cy+1} rx={9} ry={8} fill={iris}/>
+      <ellipse cx={cx-1} cy={cy+1} rx={4.5} ry={4} fill={ink}/>
+      <circle cx={cx+2} cy={cy-3} r={2} fill="#fff"/>
+      <path d={`M${cx-16} ${cy+5} C${cx-6} ${cy-11} ${cx+12} ${cy-10} ${cx+16} ${cy}`} fill="none" stroke={ink} strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round"/>
+    </>,
+  },
+  e4:{label:'ツリ目',
+    Left:({cx,cy,iris,ink})=><>
+      <path d={`M${cx-16} ${cy+5} C${cx-10} ${cy-7} ${cx+8} ${cy-12} ${cx+16} ${cy-2} C${cx+10} ${cy+8} ${cx-8} ${cy+11} ${cx-16} ${cy+5}Z`} fill="#fff" stroke={ink} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"/>
+      <ellipse cx={cx} cy={cy} rx={9} ry={8} fill={iris}/>
+      <ellipse cx={cx} cy={cy} rx={4.5} ry={4} fill={ink}/>
+      <circle cx={cx+3} cy={cy-4} r={2} fill="#fff"/>
+      <path d={`M${cx-16} ${cy+5} C${cx-10} ${cy-7} ${cx+8} ${cy-12} ${cx+16} ${cy-2}`} fill="none" stroke={ink} strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round"/>
+    </>,
+    Right:({cx,cy,iris,ink})=><>
+      <path d={`M${cx-16} ${cy-2} C${cx-8} ${cy-12} ${cx+10} ${cy-7} ${cx+16} ${cy+5} C${cx+8} ${cy+11} ${cx-10} ${cy+8} ${cx-16} ${cy-2}Z`} fill="#fff" stroke={ink} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"/>
+      <ellipse cx={cx} cy={cy} rx={9} ry={8} fill={iris}/>
+      <ellipse cx={cx} cy={cy} rx={4.5} ry={4} fill={ink}/>
+      <circle cx={cx+3} cy={cy-4} r={2} fill="#fff"/>
+      <path d={`M${cx-16} ${cy-2} C${cx-8} ${cy-12} ${cx+10} ${cy-7} ${cx+16} ${cy+5}`} fill="none" stroke={ink} strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round"/>
+    </>,
+  },
+  e5:{label:'細め',
+    Left:({cx,cy,iris,ink})=><>
+      <path d={`M${cx-16} ${cy+1} C${cx-8} ${cy-5} ${cx+8} ${cy-5} ${cx+16} ${cy+1}`} fill="none" stroke={ink} strokeWidth={3.2} strokeLinecap="round"/>
+      <path d={`M${cx-14} ${cy+2} C${cx-6} ${cy+6} ${cx+6} ${cy+6} ${cx+14} ${cy+2}`} fill="none" stroke={ink} strokeWidth={1.8} strokeLinecap="round"/>
+    </>,
+    Right:({cx,cy,iris,ink})=><>
+      <path d={`M${cx-16} ${cy+1} C${cx-8} ${cy-5} ${cx+8} ${cy-5} ${cx+16} ${cy+1}`} fill="none" stroke={ink} strokeWidth={3.2} strokeLinecap="round"/>
+      <path d={`M${cx-14} ${cy+2} C${cx-6} ${cy+6} ${cx+6} ${cy+6} ${cx+14} ${cy+2}`} fill="none" stroke={ink} strokeWidth={1.8} strokeLinecap="round"/>
+    </>,
+  },
+  e6:{label:'ハート',
+    Left:({cx,cy,iris,ink})=><>
+      <path d={`M${cx} ${cy+7} C${cx-12} ${cy+1} ${cx-15} ${cy-10} ${cx-8} ${cy-13} C${cx-4} ${cy-14} ${cx} ${cy-9} ${cx} ${cy-9} C${cx} ${cy-9} ${cx+4} ${cy-14} ${cx+8} ${cy-13} C${cx+15} ${cy-10} ${cx+12} ${cy+1} ${cx} ${cy+7}Z`} fill={iris} stroke={ink} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"/>
+      <circle cx={cx+4} cy={cy-7} r={2} fill="#fff" fillOpacity={0.8}/>
+    </>,
+    Right:({cx,cy,iris,ink})=><>
+      <path d={`M${cx} ${cy+7} C${cx-12} ${cy+1} ${cx-15} ${cy-10} ${cx-8} ${cy-13} C${cx-4} ${cy-14} ${cx} ${cy-9} ${cx} ${cy-9} C${cx} ${cy-9} ${cx+4} ${cy-14} ${cx+8} ${cy-13} C${cx+15} ${cy-10} ${cx+12} ${cy+1} ${cx} ${cy+7}Z`} fill={iris} stroke={ink} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"/>
+      <circle cx={cx+4} cy={cy-7} r={2} fill="#fff" fillOpacity={0.8}/>
+    </>,
+  },
+  e7:{label:'星',
+    Left:({cx,cy,iris,ink})=>{
+      const pts=Array.from({length:10},(_,i)=>{const a=Math.PI*i/5-Math.PI/2,r=i%2===0?13:5.5;return `${cx+r*Math.cos(a)} ${cy+r*Math.sin(a)}`;}).join('L');
+      return <><path d={`M${pts}Z`} fill={iris} stroke={ink} strokeWidth={2.2} strokeLinejoin="round"/><circle cx={cx+3} cy={cy-5} r={2} fill="#fff" fillOpacity={0.8}/></>;
+    },
+    Right:({cx,cy,iris,ink})=>{
+      const pts=Array.from({length:10},(_,i)=>{const a=Math.PI*i/5-Math.PI/2,r=i%2===0?13:5.5;return `${cx+r*Math.cos(a)} ${cy+r*Math.sin(a)}`;}).join('L');
+      return <><path d={`M${pts}Z`} fill={iris} stroke={ink} strokeWidth={2.2} strokeLinejoin="round"/><circle cx={cx+3} cy={cy-5} r={2} fill="#fff" fillOpacity={0.8}/></>;
+    },
+  },
+  e8:{label:'×目',
+    Left:({cx,cy,iris,ink})=><>
+      <line x1={cx-10} y1={cy-10} x2={cx+10} y2={cy+10} stroke={ink} strokeWidth={3.2} strokeLinecap="round"/>
+      <line x1={cx+10} y1={cy-10} x2={cx-10} y2={cy+10} stroke={ink} strokeWidth={3.2} strokeLinecap="round"/>
+    </>,
+    Right:({cx,cy,iris,ink})=><>
+      <line x1={cx-10} y1={cy-10} x2={cx+10} y2={cy+10} stroke={ink} strokeWidth={3.2} strokeLinecap="round"/>
+      <line x1={cx+10} y1={cy-10} x2={cx-10} y2={cy+10} stroke={ink} strokeWidth={3.2} strokeLinecap="round"/>
+    </>,
+  },
+  e9:{label:'二重',
+    Left:({cx,cy,iris,ink})=><>
+      <path d={`M${cx-16} ${cy+2} C${cx-12} ${cy-10} ${cx+10} ${cy-10} ${cx+16} ${cy+2} C${cx+10} ${cy+11} ${cx-10} ${cy+11} ${cx-16} ${cy+2}Z`} fill="#fff" stroke={ink} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"/>
+      <circle cx={cx} cy={cy+1} r={10} fill={iris}/>
+      <circle cx={cx} cy={cy+1} r={5} fill={ink}/>
+      <circle cx={cx+4} cy={cy-3} r={2.5} fill="#fff"/>
+      <path d={`M${cx-16} ${cy+2} C${cx-12} ${cy-10} ${cx+10} ${cy-10} ${cx+16} ${cy+2}`} fill="none" stroke={ink} strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round"/>
+      <path d={`M${cx-12} ${cy-11} C${cx-7} ${cy-18} ${cx+7} ${cy-18} ${cx+12} ${cy-11}`} fill="none" stroke={ink} strokeWidth={1.6} strokeLinecap="round"/>
+    </>,
+    Right:({cx,cy,iris,ink})=><>
+      <path d={`M${cx-16} ${cy+2} C${cx-12} ${cy-10} ${cx+10} ${cy-10} ${cx+16} ${cy+2} C${cx+10} ${cy+11} ${cx-10} ${cy+11} ${cx-16} ${cy+2}Z`} fill="#fff" stroke={ink} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"/>
+      <circle cx={cx} cy={cy+1} r={10} fill={iris}/>
+      <circle cx={cx} cy={cy+1} r={5} fill={ink}/>
+      <circle cx={cx+4} cy={cy-3} r={2.5} fill="#fff"/>
+      <path d={`M${cx-16} ${cy+2} C${cx-12} ${cy-10} ${cx+10} ${cy-10} ${cx+16} ${cy+2}`} fill="none" stroke={ink} strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round"/>
+      <path d={`M${cx-12} ${cy-11} C${cx-7} ${cy-18} ${cx+7} ${cy-18} ${cx+12} ${cy-11}`} fill="none" stroke={ink} strokeWidth={1.6} strokeLinecap="round"/>
+    </>,
+  },
+  e10:{label:'切れ長',
+    Left:({cx,cy,iris,ink})=><>
+      <path d={`M${cx-18} ${cy+3} C${cx-12} ${cy-8} ${cx+8} ${cy-10} ${cx+18} ${cy-1} C${cx+12} ${cy+8} ${cx-8} ${cy+10} ${cx-18} ${cy+3}Z`} fill="#fff" stroke={ink} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"/>
+      <ellipse cx={cx} cy={cy+1} rx={10} ry={7} fill={iris}/>
+      <ellipse cx={cx} cy={cy+1} rx={5} ry={3.5} fill={ink}/>
+      <circle cx={cx+4} cy={cy-3} r={2} fill="#fff"/>
+      <path d={`M${cx-18} ${cy+3} C${cx-12} ${cy-8} ${cx+8} ${cy-10} ${cx+18} ${cy-1}`} fill="none" stroke={ink} strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round"/>
+    </>,
+    Right:({cx,cy,iris,ink})=><>
+      <path d={`M${cx-18} ${cy-1} C${cx-8} ${cy-10} ${cx+12} ${cy-8} ${cx+18} ${cy+3} C${cx+8} ${cy+10} ${cx-12} ${cy+8} ${cx-18} ${cy-1}Z`} fill="#fff" stroke={ink} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"/>
+      <ellipse cx={cx} cy={cy+1} rx={10} ry={7} fill={iris}/>
+      <ellipse cx={cx} cy={cy+1} rx={5} ry={3.5} fill={ink}/>
+      <circle cx={cx+4} cy={cy-3} r={2} fill="#fff"/>
+      <path d={`M${cx-18} ${cy-1} C${cx-8} ${cy-10} ${cx+12} ${cy-8} ${cx+18} ${cy+3}`} fill="none" stroke={ink} strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round"/>
+    </>,
+  },
+};
+
+// ── Nose Shapes ───────────────────────────────────────────────────────────
+const NOSE_SHAPES={
+  n1:{label:'点',Comp:({nx,ny,ink})=><>
+    <circle cx={nx-5} cy={ny} r={2.5} fill={ink} fillOpacity={0.55}/>
+    <circle cx={nx+5} cy={ny} r={2.5} fill={ink} fillOpacity={0.55}/>
+  </>},
+  n2:{label:'丸',Comp:({nx,ny,ink,skin})=><>
+    <path d={`M${nx-14} ${ny+3} C${nx-14} ${ny-4} ${nx-6} ${ny-8} ${nx} ${ny-8} C${nx+6} ${ny-8} ${nx+14} ${ny-4} ${nx+14} ${ny+3}`} fill="none" stroke={ink} strokeWidth={2} strokeLinecap="round"/>
+    <circle cx={nx-8} cy={ny+2} r={5} fill={skin} stroke={ink} strokeWidth={2}/>
+    <circle cx={nx+8} cy={ny+2} r={5} fill={skin} stroke={ink} strokeWidth={2}/>
+  </>},
+  n3:{label:'三角',Comp:({nx,ny,ink})=><path d={`M${nx} ${ny-9} L${nx-11} ${ny+7} L${nx+11} ${ny+7}Z`} fill="none" stroke={ink} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round"/>},
+  n4:{label:'なし',Comp:()=>null},
+};
+
+// ── Mouth Shapes ──────────────────────────────────────────────────────────
+const MOUTH_SHAPES={
+  m1:{label:'笑顔',Comp:({mx,my,lips,ink})=><path d={`M${mx-16} ${my} C${mx-8} ${my+14} ${mx+8} ${my+14} ${mx+16} ${my}`} fill="none" stroke={ink} strokeWidth={2.8} strokeLinecap="round" strokeLinejoin="round"/>},
+  m2:{label:'にっこり',Comp:({mx,my,lips,ink})=><>
+    <path d={`M${mx-18} ${my} C${mx-9} ${my+17} ${mx+9} ${my+17} ${mx+18} ${my} L${mx+16} ${my+1} C${mx+8} ${my+19} ${mx-8} ${my+19} ${mx-16} ${my+1}Z`} fill={lips} stroke={ink} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"/>
+    <line x1={mx} y1={my+1} x2={mx} y2={my+18} stroke={ink} strokeWidth={1.2} strokeLinecap="round" opacity={0.4}/>
+  </>},
+  m3:{label:'への字',Comp:({mx,my,ink})=><path d={`M${mx-16} ${my+5} C${mx-8} ${my-6} ${mx+8} ${my-6} ${mx+16} ${my+5}`} fill="none" stroke={ink} strokeWidth={2.8} strokeLinecap="round" strokeLinejoin="round"/>},
+  m4:{label:'一文字',Comp:({mx,my,ink})=><line x1={mx-18} y1={my} x2={mx+18} y2={my} stroke={ink} strokeWidth={2.8} strokeLinecap="round"/>},
+  m5:{label:'驚き',Comp:({mx,my,lips,ink})=><>
+    <ellipse cx={mx} cy={my+5} rx={11} ry={14} fill={lips} stroke={ink} strokeWidth={2.5}/>
+    <ellipse cx={mx} cy={my+6} rx={6} ry={9} fill={ink} fillOpacity={0.45}/>
+  </>},
+  m6:{label:'むー',Comp:({mx,my,ink})=><>
+    <path d={`M${mx-14} ${my} C${mx-7} ${my+3} ${mx+7} ${my+3} ${mx+14} ${my}`} fill="none" stroke={ink} strokeWidth={2.8} strokeLinecap="round"/>
+    <path d={`M${mx-14} ${my-7} C${mx-12} ${my-2} ${mx-14} ${my}`} fill="none" stroke={ink} strokeWidth={2} strokeLinecap="round"/>
+    <path d={`M${mx+14} ${my-7} C${mx+12} ${my-2} ${mx+14} ${my}`} fill="none" stroke={ink} strokeWidth={2} strokeLinecap="round"/>
+  </>},
+  m7:{label:'舌出し',Comp:({mx,my,lips,ink})=><>
+    <path d={`M${mx-16} ${my} C${mx-8} ${my+11} ${mx+8} ${my+11} ${mx+16} ${my}`} fill="none" stroke={ink} strokeWidth={2.8} strokeLinecap="round"/>
+    <path d={`M${mx-8} ${my+10} C${mx-10} ${my+22} ${mx+10} ${my+22} ${mx+8} ${my+10} C${mx+6} ${my+14} ${mx-6} ${my+14} ${mx-8} ${my+10}Z`} fill={lips} stroke={ink} strokeWidth={2}/>
+  </>},
+};
+
+// ── Head Accessories ──────────────────────────────────────────────────────
+const HEAD_ACCESSORIES={
+  ha1:{label:'なし',Comp:()=>null},
+  ha2:{label:'花1輪',Comp:({accent,ink})=><>
+    {[0,1,2,3,4,5].map(i=>{
+      const a=i*Math.PI/3, px=116+Math.cos(a)*12, py=84+Math.sin(a)*12;
+      return <ellipse key={i} cx={px} cy={py} rx={7} ry={9} fill={accent} stroke={ink} strokeWidth={1.8} transform={`rotate(${i*60+90},${px},${py})`}/>;
+    })}
+    <circle cx={116} cy={84} r={7} fill="#ffe08a" stroke={ink} strokeWidth={2}/>
+  </>},
+  ha3:{label:'花冠',Comp:({accent,ink})=>{
+    const flowers=[];
+    for(let i=0;i<9;i++){
+      const t=Math.PI*(i/8-0.05), r=115+Math.sin(i*0.9)*6;
+      const fx=170+r*Math.cos(t-Math.PI/2), fy=100+r*Math.sin(t-Math.PI/2);
+      flowers.push({x:fx,y:fy});
+    }
+    return <>{flowers.map(({x,y},i)=><g key={i}>
+      {[0,1,2,3,4].map(j=>{const a=j*Math.PI*2/5;return <ellipse key={j} cx={x+Math.cos(a)*7} cy={y+Math.sin(a)*7} rx={4} ry={4} fill={accent} stroke={ink} strokeWidth={1.2}/>;})}</g>)}</>;
+  }},
+  ha4:{label:'リボン',Comp:({accent,ink})=><>
+    <path d="M153 84 C141 68 118 66 114 77 C110 89 130 97 153 90Z" fill={accent} stroke={ink} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round"/>
+    <path d="M187 84 C199 68 222 66 226 77 C230 89 210 97 187 90Z" fill={accent} stroke={ink} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round"/>
+    <ellipse cx={170} cy={87} rx={15} ry={11} fill={accent} stroke={ink} strokeWidth={2.5}/>
+    <circle cx={170} cy={87} r={6} fill="#fff" stroke={ink} strokeWidth={2}/>
+  </>},
+  ha5:{label:'ヘアピン',Comp:({accent,ink})=><>
+    <rect x={106} y={101} width={32} height={7} rx={3.5} fill={accent} stroke={ink} strokeWidth={2} transform="rotate(-18,122,104)"/>
+    <circle cx={109} cy={96} r={6} fill="#ffe08a" stroke={ink} strokeWidth={2}/>
+    <circle cx={109} cy={96} r={3} fill={accent}/>
+  </>},
+  ha6:{label:'葉っぱ',Comp:({accent,ink})=><>
+    <path d="M106 96 C98 74 122 58 144 70 C132 80 118 88 106 96Z" fill={accent} stroke={ink} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round"/>
+    <path d="M106 96 C118 82 136 74 144 70" fill="none" stroke={ink} strokeWidth={1.5} strokeLinecap="round"/>
+    <line x1={106} y1={96} x2={118} y2={76} stroke={ink} strokeWidth={1} strokeLinecap="round" opacity={0.5}/>
+  </>},
+  ha7:{label:'星',Comp:({accent,ink})=>{
+    const pts=Array.from({length:10},(_,i)=>{const a=Math.PI*i/5-Math.PI/2,r=i%2===0?22:9;return `${170+r*Math.cos(a)} ${72+r*Math.sin(a)}`;}).join('L');
+    return <path d={`M${pts}Z`} fill={accent} stroke={ink} strokeWidth={2.5} strokeLinejoin="round"/>;
+  }},
+  ha8:{label:'ベレー帽',Comp:({accent,ink})=><>
+    <path d="M64 146 C60 98 104 50 170 50 C236 50 280 98 276 146 C268 133 248 118 226 114 C202 109 192 120 192 120 C186 108 180 104 170 104 C160 104 154 108 148 120 C148 120 138 109 114 114 C92 118 72 133 64 146Z" fill={accent} stroke={ink} strokeWidth={2.8} strokeLinejoin="round" strokeLinecap="round"/>
+    <ellipse cx={170} cy={106} rx={26} ry={9} fill={accent} stroke={ink} strokeWidth={2.5}/>
+  </>},
+  ha9:{label:'ニット帽',Comp:({accent,ink})=><>
+    <path d="M66 146 C62 94 104 46 170 46 C236 46 278 94 274 146 C260 138 240 130 226 130 C208 128 196 134 170 134 C144 134 132 128 114 130 C100 130 80 138 66 146Z" fill={accent} stroke={ink} strokeWidth={2.8} strokeLinejoin="round" strokeLinecap="round"/>
+    <ellipse cx={170} cy={50} rx={24} ry={16} fill={accent} stroke={ink} strokeWidth={2.5}/>
+    <circle cx={170} cy={36} r={10} fill="#fce8a0" stroke={ink} strokeWidth={2.5}/>
+    {[0,1,2,3,4,5,6,7].map(i=>{const x=80+i*28;return x<258?<line key={i} x1={x} y1={130} x2={x+5} y2={146} stroke={ink} strokeWidth={1.5} strokeLinecap="round"/>:null;})}
+  </>},
+};
+
+// ── SVG Layer Components ──────────────────────────────────────────────────
+function BackHair({selected,colors,adj}){
+  const s=BACK_HAIR[selected.backHair];
+  if(!s||!s.Comp)return null;
+  return <s.Comp hair={colors.backHair} ink={colors.ink} accent={colors.accent}/>;
+}
+function Face({selected,colors,adj}){
+  const s=FACE_SHAPES[selected.face];
+  if(!s||!s.Comp)return null;
+  return <s.Comp skin={colors.skin} ink={colors.ink} adj={adj}/>;
+}
+function Body({colors}){
+  const {skin,ink}=colors;
+  return <>
+    <path d="M122 332 C108 344 92 358 76 372 C62 382 50 392 46 400 L294 400 C290 392 278 382 264 372 C248 358 232 344 218 332 C208 325 198 320 190 317 C182 314 177 313 170 313 C163 313 158 314 150 317 C142 320 132 325 122 332Z" fill={skin} stroke={ink} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round"/>
+    <path d="M46 400 C52 388 64 378 80 368 C96 357 116 346 128 336 C138 329 148 323 158 320 C163 318 167 317 170 317 C173 317 177 318 182 320 C192 323 202 329 212 336 C224 346 244 357 260 368 C276 378 288 388 294 400" fill="#e6d2c0" stroke={ink} strokeWidth={1.8} strokeLinejoin="round" strokeLinecap="round"/>
+  </>;
+}
+function FrontHair({selected,colors,adj}){
+  const s=FRONT_HAIR[selected.frontHair];
+  if(!s||!s.Comp)return null;
+  return <s.Comp hair={colors.frontHair} ink={colors.ink}/>;
+}
+function Brows({selected,colors,adj}){
+  const s=BROW_SHAPES[selected.brows];
+  if(!s)return null;
+  const {ink}=colors;
+  const ex1=170-adj.eyeX, ex2=170+adj.eyeX;
+  const by=adj.browY, ang=adj.browAngle||0;
+  return <>
+    <g transform={`rotate(${ang},${ex1},${by})`}><s.Left cx={ex1} cy={by} ink={ink}/></g>
+    <g transform={`rotate(${-ang},${ex2},${by})`}><s.Right cx={ex2} cy={by} ink={ink}/></g>
+  </>;
+}
+function Eyes({selected,colors,adj}){
+  const s=EYE_SHAPES[selected.eyes];
+  if(!s)return null;
+  const {iris,ink}=colors;
+  const ex1=170-adj.eyeX, ex2=170+adj.eyeX;
+  const ey=adj.eyeY, es=adj.eyeSize/100;
+  return <g transform={`translate(170,${ey}) scale(${es}) translate(${-170},${-ey})`}>
+    <s.Left cx={ex1} cy={ey} iris={iris} ink={ink}/>
+    <s.Right cx={ex2} cy={ey} iris={iris} ink={ink}/>
+  </g>;
+}
+function Nose({selected,colors,adj}){
+  const s=NOSE_SHAPES[selected.nose];
+  if(!s||!s.Comp)return null;
+  const ny=adj.noseY, ns=adj.noseSize/100;
+  return <g transform={`translate(170,${ny}) scale(${ns}) translate(-170,${-ny})`}>
+    <s.Comp nx={170} ny={ny} ink={colors.ink} skin={colors.skin}/>
+  </g>;
+}
+function Mouth({selected,colors,adj}){
+  const s=MOUTH_SHAPES[selected.mouth];
+  if(!s||!s.Comp)return null;
+  const my=adj.mouthY, ms=adj.mouthSize/100;
+  return <g transform={`translate(170,${my}) scale(${ms}) translate(-170,${-my})`}>
+    <s.Comp mx={170} my={my} lips={colors.lips} ink={colors.ink}/>
+  </g>;
+}
+function DecoHair({selected,colors,adj}){
+  const s=DECO_HAIR[selected.decoHair];
+  if(!s||!s.Comp)return null;
+  return <s.Comp hair={colors.decoHair} ink={colors.ink} accent={colors.accent}/>;
+}
+function HeadAccessory({selected,colors,adj}){
+  const s=HEAD_ACCESSORIES[selected.headAccessory];
+  if(!s||!s.Comp)return null;
+  return <s.Comp accent={colors.accent} ink={colors.ink}/>;
+}
+
+// ── Main SVG ──────────────────────────────────────────────────────────────
+function FaceSvg({av,svgId,bgOverride}){
+  const {selected,colors,adj,sketch,bg}=av;
+  const bgFill=bgOverride!=null?bgOverride:(bg==='cream'?'#faf6ef':bg==='transparent'?'none':'#ffffff');
+  return <svg id={svgId} viewBox="0 0 340 400" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <filter id="sk" x="-8%" y="-8%" width="116%" height="116%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.015" numOctaves="4" seed="3" result="n"/>
+        <feDisplacementMap in="SourceGraphic" in2="n" scale={1.5} xChannelSelector="R" yChannelSelector="G"/>
+      </filter>
+    </defs>
+    {bgFill!=='none'&&<rect width={340} height={400} fill={bgFill}/>}
+    <g filter={sketch?"url(#sk)":undefined}>
+      <BackHair selected={selected} colors={colors} adj={adj}/>
+      <Face selected={selected} colors={colors} adj={adj}/>
+      <Body colors={colors}/>
+      <FrontHair selected={selected} colors={colors} adj={adj}/>
+      <Brows selected={selected} colors={colors} adj={adj}/>
+      <Eyes selected={selected} colors={colors} adj={adj}/>
+      <Nose selected={selected} colors={colors} adj={adj}/>
+      <Mouth selected={selected} colors={colors} adj={adj}/>
+      <DecoHair selected={selected} colors={colors} adj={adj}/>
+      <HeadAccessory selected={selected} colors={colors} adj={adj}/>
+    </g>
+  </svg>;
+}
+
+// ── Thumbnail ─────────────────────────────────────────────────────────────
+function Thumbnail({cat,partId,isActive,onClick}){
+  const thumbAv=useMemo(()=>({
+    selected:{...INITIAL.selected,[cat]:partId},
+    colors:THUMB_COLORS,adj:THUMB_ADJ,sketch:false,bg:'white'
+  }),[cat,partId]);
+  const s=getShape(cat,partId);
+  return <div className={`part-thumb${isActive?' active':''}`} onClick={onClick} title={s?s.label:partId}>
+    <FaceSvg av={thumbAv} bgOverride="transparent"/>
+    <span className="part-label">{s?s.label:partId}</span>
+  </div>;
+}
+
+function getShape(cat,id){
+  const maps={face:FACE_SHAPES,backHair:BACK_HAIR,frontHair:FRONT_HAIR,decoHair:DECO_HAIR,brows:BROW_SHAPES,eyes:EYE_SHAPES,nose:NOSE_SHAPES,mouth:MOUTH_SHAPES,headAccessory:HEAD_ACCESSORIES};
+  return (maps[cat]||{})[id]||null;
+}
+function getPartIds(cat){
+  const maps={face:FACE_SHAPES,backHair:BACK_HAIR,frontHair:FRONT_HAIR,decoHair:DECO_HAIR,brows:BROW_SHAPES,eyes:EYE_SHAPES,nose:NOSE_SHAPES,mouth:MOUTH_SHAPES,headAccessory:HEAD_ACCESSORIES};
+  return Object.keys(maps[cat]||{});
+}
+
+// ── Color Swatches ────────────────────────────────────────────────────────
+function ColorSection({label,palette,activeColor,onPick}){
+  return <div className="color-section">
+    <div className="color-section-title">{label}</div>
+    <div className="color-swatches">
+      {palette.map(c=><div key={c} className={`swatch${activeColor===c?' active':''}`} style={{background:c,outline:c==='#fff'||c==='#fde8cc'?'1px solid #e4dfd8':'none'}} onClick={()=>onPick(c)}/>)}
+    </div>
+  </div>;
+}
+
+// ── Adj Slider Row ────────────────────────────────────────────────────────
+function AdjRow({label,name,value,min,max,step,onChange}){
+  const s=step||1;
+  return <div className="adj-row">
+    <div className="adj-name">{label}</div>
+    <button className="adj-nudge" onClick={()=>onChange(name,Math.max(min,value-s))}>−</button>
+    <input type="range" className="adj-slider" min={min} max={max} step={s} value={value} onChange={e=>onChange(name,Number(e.target.value))}/>
+    <button className="adj-nudge" onClick={()=>onChange(name,Math.min(max,value+s))}>+</button>
+    <div className="adj-val">{value}</div>
+  </div>;
+}
+
+// ── URL persistence ───────────────────────────────────────────────────────
+function loadFromUrl(){
+  try{
+    const p=new URLSearchParams(window.location.search).get('s');
+    if(!p)return null;
+    const d=JSON.parse(atob(p));
+    return {
+      ...INITIAL,...d,
+      selected:{...INITIAL.selected,...(d.selected||{})},
+      colors:{...INITIAL.colors,...(d.colors||{})},
+      adj:{...INITIAL.adj,...(d.adj||{})},
+    };
+  }catch(e){return null;}
+}
+
+// ── App ───────────────────────────────────────────────────────────────────
+function App(){
+  const [av,setAv]=useState(()=>loadFromUrl()||JSON.parse(JSON.stringify(INITIAL)));
+  const [activeCat,setActiveCat]=useState('face');
+  const [subTab,setSubTab]=useState('parts');
+  const [showSaveModal,setShowSaveModal]=useState(false);
+
+  const setSelected=(k,v)=>setAv(a=>({...a,selected:{...a.selected,[k]:v}}));
+  const setColor=(k,v)=>setAv(a=>({...a,colors:{...a.colors,[k]:v}}));
+  const setAdj=(k,v)=>setAv(a=>({...a,adj:{...a.adj,[k]:v}}));
+
+  const randomize=useCallback(()=>{
+    const rnd=arr=>arr[Math.floor(Math.random()*arr.length)];
+    setAv(a=>({...a,
+      selected:{
+        face:rnd(Object.keys(FACE_SHAPES)),backHair:rnd(Object.keys(BACK_HAIR)),
+        frontHair:rnd(Object.keys(FRONT_HAIR)),decoHair:rnd(Object.keys(DECO_HAIR)),
+        brows:rnd(Object.keys(BROW_SHAPES)),eyes:rnd(Object.keys(EYE_SHAPES)),
+        nose:rnd(Object.keys(NOSE_SHAPES)),mouth:rnd(Object.keys(MOUTH_SHAPES)),
+        headAccessory:rnd(Object.keys(HEAD_ACCESSORIES)),
+      },
+      colors:{
+        skin:rnd(SKIN_COLORS),backHair:rnd(HAIR_COLORS),frontHair:rnd(HAIR_COLORS),
+        decoHair:rnd(HAIR_COLORS),iris:rnd(IRIS_COLORS),lips:rnd(LIPS_COLORS),
+        ink:'#2a1f1a',accent:rnd(ACC_COLORS),
+      },
+    }));
+  },[]);
+
+  const reset=useCallback(()=>setAv(JSON.parse(JSON.stringify(INITIAL))),[]);
+
+  const shareUrl=useCallback(()=>{
+    try{
+      const enc=btoa(JSON.stringify(av));
+      const url=`${location.origin}${location.pathname}?s=${enc}`;
+      if(navigator.clipboard)navigator.clipboard.writeText(url).then(()=>alert('URLをコピーしました！'));
+      else{prompt('URLをコピーしてください：',url);}
+    }catch(e){alert('共有エラー');}
+  },[av]);
+
+  const doExport=useCallback((bgOpt)=>{
+    const svgEl=document.getElementById('main-face-svg');
+    if(!svgEl){alert('SVGが見つかりません');return;}
+    const serializer=new XMLSerializer();
+    const svgStr=serializer.serializeToString(svgEl);
+    const svgBlob=new Blob([svgStr],{type:'image/svg+xml;charset=utf-8'});
+    const url=URL.createObjectURL(svgBlob);
+    const img=new Image();
+    img.onload=()=>{
+      const canvas=document.createElement('canvas');
+      canvas.width=680; canvas.height=800;
+      const ctx=canvas.getContext('2d');
+      if(bgOpt==='white'){ctx.fillStyle='#ffffff';ctx.fillRect(0,0,680,800);}
+      else if(bgOpt==='cream'){ctx.fillStyle='#faf6ef';ctx.fillRect(0,0,680,800);}
+      ctx.drawImage(img,0,0,680,800);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(blob=>{
+        const a=document.createElement('a');
+        a.href=URL.createObjectURL(blob);
+        a.download='nigaoe.png';
+        a.click();
+      },'image/png');
+    };
+    img.onerror=()=>alert('エクスポートに失敗しました');
+    img.src=url;
+    setShowSaveModal(false);
+  },[]);
+
+  // Compute what adjustments apply to active cat
+  const adjRows=useMemo(()=>{
+    if(activeCat==='face') return [
+      {label:'横幅',name:'faceW',min:70,max:130,step:2},
+      {label:'縦幅',name:'faceH',min:70,max:130,step:2},
+    ];
+    if(activeCat==='eyes') return [
+      {label:'縦位置',name:'eyeY',min:145,max:205,step:1},
+      {label:'横間隔',name:'eyeX',min:25,max:75,step:1},
+      {label:'サイズ',name:'eyeSize',min:60,max:150,step:2},
+    ];
+    if(activeCat==='brows') return [
+      {label:'縦位置',name:'browY',min:120,max:162,step:1},
+      {label:'角度',name:'browAngle',min:-20,max:20,step:1},
+    ];
+    if(activeCat==='nose') return [
+      {label:'縦位置',name:'noseY',min:185,max:238,step:1},
+      {label:'サイズ',name:'noseSize',min:60,max:140,step:2},
+    ];
+    if(activeCat==='mouth') return [
+      {label:'縦位置',name:'mouthY',min:220,max:278,step:1},
+      {label:'サイズ',name:'mouthSize',min:60,max:140,step:2},
+    ];
+    return [];
+  },[activeCat]);
+
+  // Color sections for panel
+  const colorSections=useMemo(()=>{
+    const skinSec={label:'肌色',palette:SKIN_COLORS,key:'skin'};
+    if(activeCat==='backHair') return [skinSec,{label:'後ろ髪',palette:HAIR_COLORS,key:'backHair'}];
+    if(activeCat==='frontHair') return [skinSec,{label:'前髪',palette:HAIR_COLORS,key:'frontHair'}];
+    if(activeCat==='decoHair') return [skinSec,{label:'装飾髪',palette:HAIR_COLORS,key:'decoHair'}];
+    if(activeCat==='eyes') return [skinSec,{label:'瞳',palette:IRIS_COLORS,key:'iris'}];
+    if(activeCat==='mouth') return [skinSec,{label:'唇',palette:LIPS_COLORS,key:'lips'}];
+    if(activeCat==='headAccessory') return [skinSec,{label:'アクセ色',palette:ACC_COLORS,key:'accent'}];
+    return [
+      skinSec,
+      {label:'後ろ髪',palette:HAIR_COLORS,key:'backHair'},
+      {label:'前髪',palette:HAIR_COLORS,key:'frontHair'},
+      {label:'装飾髪',palette:HAIR_COLORS,key:'decoHair'},
+      {label:'瞳',palette:IRIS_COLORS,key:'iris'},
+      {label:'唇',palette:LIPS_COLORS,key:'lips'},
+      {label:'アクセ色',palette:ACC_COLORS,key:'accent'},
+    ];
+  },[activeCat]);
+
+  const partIds=getPartIds(activeCat);
+  const catLabel=CATS.find(c=>c.id===activeCat)?.label||'';
+
+  const bgColors={white:'#ffffff',cream:'#faf6ef',transparent:null};
+
+  return <div id="app-root">
+    {/* ── Header ─── */}
+    <div className="header">
+      <div className="logo">似顔絵<span>メーカー</span></div>
+      <button className="btn" onClick={randomize}>ランダム</button>
+      <button className="btn" onClick={reset}>リセット</button>
+      <button className="btn" onClick={shareUrl}>共有URL</button>
+      <button className="btn" onClick={()=>setShowSaveModal(true)}>PNG保存</button>
+      <button className={`btn${av.sketch?' btn-active':''}`} onClick={()=>setAv(a=>({...a,sketch:!a.sketch}))}>スケッチ</button>
+    </div>
+
+    {/* ── Category Tabs ─── */}
+    <div className="cat-bar">
+      {CATS.map(c=><div key={c.id} className={`cat-tab${activeCat===c.id?' active':''}`}
+        onClick={()=>{setActiveCat(c.id);setSubTab('parts');}}>{c.label}</div>)}
+    </div>
+
+    {/* ── Main ─── */}
+    <div className="main">
+      {/* Preview */}
+      <div className="preview-area">
+        <div className="preview-wrap">
+          <FaceSvg av={av} svgId="main-face-svg"/>
+        </div>
+      </div>
+
+      {/* Right Panel */}
+      <div className="panel-area">
+        <div className="sub-tabs">
+          <button className={`sub-tab${subTab==='parts'?' active':''}`} onClick={()=>setSubTab('parts')}>パーツ</button>
+          <button className={`sub-tab${subTab==='color'?' active':''}`} onClick={()=>setSubTab('color')}>カラー</button>
+          <button className={`sub-tab${subTab==='adj'?' active':''}`} onClick={()=>setSubTab('adj')}>配置</button>
+        </div>
+
+        <div className="sub-content">
+          {/* Parts Tab */}
+          {subTab==='parts'&&<div className="parts-grid">
+            {partIds.map(id=><Thumbnail key={id} cat={activeCat} partId={id}
+              isActive={av.selected[activeCat]===id} onClick={()=>setSelected(activeCat,id)}/>)}
+          </div>}
+
+          {/* Color Tab */}
+          {subTab==='color'&&<>
+            {colorSections.map(s=><ColorSection key={s.key} label={s.label} palette={s.palette}
+              activeColor={av.colors[s.key]} onPick={v=>setColor(s.key,v)}/>)}
+            <div className="color-section">
+              <div className="color-section-title">背景色</div>
+              <div className="bg-row">
+                {[['white','白','#ffffff'],['cream','クリーム','#faf6ef'],['transparent','透明',null]].map(([id,lbl,clr])=><>
+                  <div key={id} className={`bg-opt${av.bg===id?' active':''}`}
+                    style={{background:clr||undefined,
+                      backgroundImage:clr?undefined:'repeating-conic-gradient(#ccc 0% 25%, transparent 0% 50%) 0 0/12px 12px',
+                      border:`2.5px solid ${av.bg===id?'#1a1714':'#e4dfd8'}`}}
+                    title={lbl} onClick={()=>setAv(a=>({...a,bg:id}))}/>
+                </>)}
+              </div>
+            </div>
+          </>}
+
+          {/* Adj Tab */}
+          {subTab==='adj'&&<>
+            {adjRows.length>0&&<div className="adj-section">
+              <div className="adj-label">{catLabel}の配置</div>
+              {adjRows.map(r=><AdjRow key={r.name} {...r} value={av.adj[r.name]} onChange={setAdj}/>)}
+            </div>}
+            {adjRows.length===0&&<div className="no-adj">このカテゴリに専用配置設定はありません</div>}
+            <div className="adj-section">
+              <div className="adj-label">全パーツ共通</div>
+              <AdjRow label="目・縦" name="eyeY" min={145} max={205} step={1} value={av.adj.eyeY} onChange={setAdj}/>
+              <AdjRow label="目・横" name="eyeX" min={25} max={75} step={1} value={av.adj.eyeX} onChange={setAdj}/>
+              <AdjRow label="目サイズ" name="eyeSize" min={60} max={150} step={2} value={av.adj.eyeSize} onChange={setAdj}/>
+              <AdjRow label="眉・縦" name="browY" min={120} max={162} step={1} value={av.adj.browY} onChange={setAdj}/>
+              <AdjRow label="眉角度" name="browAngle" min={-20} max={20} step={1} value={av.adj.browAngle} onChange={setAdj}/>
+              <AdjRow label="鼻・縦" name="noseY" min={185} max={238} step={1} value={av.adj.noseY} onChange={setAdj}/>
+              <AdjRow label="鼻サイズ" name="noseSize" min={60} max={140} step={2} value={av.adj.noseSize} onChange={setAdj}/>
+              <AdjRow label="口・縦" name="mouthY" min={220} max={278} step={1} value={av.adj.mouthY} onChange={setAdj}/>
+              <AdjRow label="口サイズ" name="mouthSize" min={60} max={140} step={2} value={av.adj.mouthSize} onChange={setAdj}/>
+              <AdjRow label="顔・横幅" name="faceW" min={70} max={130} step={2} value={av.adj.faceW} onChange={setAdj}/>
+              <AdjRow label="顔・縦幅" name="faceH" min={70} max={130} step={2} value={av.adj.faceH} onChange={setAdj}/>
+            </div>
+          </>}
+        </div>
+      </div>
+    </div>
+
+    {/* ── Save Modal ─── */}
+    {showSaveModal&&<div className="modal-overlay" onClick={()=>setShowSaveModal(false)}>
+      <div className="modal" onClick={e=>e.stopPropagation()}>
+        <h3>背景を選んで保存</h3>
+        <p>PNG形式でダウンロードします</p>
+        <div className="modal-btns">
+          <button className="btn btn-primary" onClick={()=>doExport('white')}>白背景</button>
+          <button className="btn btn-primary" onClick={()=>doExport('cream')}>クリーム</button>
+          <button className="btn btn-primary" onClick={()=>doExport('transparent')}>透明</button>
+        </div>
+        <div className="modal-cancel">
+          <button className="btn" onClick={()=>setShowSaveModal(false)}>キャンセル</button>
+        </div>
+      </div>
+    </div>}
+  </div>;
+}
+
+ReactDOM.createRoot(document.getElementById('app-root')).render(<App/>);
+</script>
+</body>
+</html>
