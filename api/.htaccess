@@ -1,0 +1,13 @@
+# api/ ディレクトリの設定
+
+# ディレクトリ一覧を非表示
+Options -Indexes
+
+# config.php への直接アクセスを禁止
+<Files "config.php">
+    Require all denied
+</Files>
+
+# PHP エラーを画面に表示しない（本番環境用）
+php_flag display_errors off
+php_flag log_errors on

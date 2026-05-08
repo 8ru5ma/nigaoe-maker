@@ -1,0 +1,12 @@
+# uploads/parts/ セキュリティ設定
+
+# ディレクトリ一覧を非表示
+Options -Indexes
+
+# PHP の実行を完全に禁止（アップロードファイルをスクリプトとして実行させない）
+<FilesMatch "\.php$">
+    Require all denied
+</FilesMatch>
+RemoveHandler .php .php3 .php4 .php5 .php7 .phtml
+RemoveType application/x-httpd-php
+Options -ExecCGI

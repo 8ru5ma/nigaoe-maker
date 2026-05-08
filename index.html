@@ -31,8 +31,6 @@ body{background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,'H
 .cat-btn.on .cat-count{background:var(--acc);color:#fff}
 
 .main{flex:1;display:grid;grid-template-columns:1fr 1fr;overflow:hidden}
-
-/* Preview */
 .prev{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px;background:var(--bg);background-image:radial-gradient(circle,#d8d3cc 1px,transparent 1px);background-size:22px 22px}
 .face-frame{position:relative;border-radius:50%;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.12),0 0 0 1px var(--bd);background:#fff;flex-shrink:0}
 .face-frame svg{display:block}
@@ -41,9 +39,7 @@ body{background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,'H
 .swatch{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2.5px solid transparent;transition:all .15s;box-shadow:0 1px 3px rgba(0,0,0,.15)}
 .swatch:hover{transform:scale(1.12)}
 .swatch.on{border-color:var(--acc);box-shadow:0 0 0 2px var(--surf),0 0 0 4px var(--acc)}
-.prev-acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
 
-/* Right panel */
 .rpan{background:var(--surf);border-left:1.5px solid var(--bd);display:flex;flex-direction:column;overflow:hidden}
 .stabs{display:flex;border-bottom:1.5px solid var(--bd);padding:0 10px;flex-shrink:0}
 .stab{padding:8px 12px;font-size:12px;font-family:inherit;border:none;background:none;cursor:pointer;color:var(--mu);border-bottom:2px solid transparent;margin-bottom:-1.5px;transition:all .15s;font-weight:600}
@@ -67,9 +63,7 @@ body{background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,'H
 
 .empty-cat{padding:24px 16px;text-align:center;color:var(--mu);font-size:12px;line-height:1.9;grid-column:1/-1}
 .empty-cat a{color:var(--acc);font-weight:600;text-decoration:none}
-.empty-cat a:hover{text-decoration:underline}
 
-/* Modal */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;display:flex;align-items:center;justify-content:center}
 .modal{background:var(--surf);border-radius:14px;padding:24px;max-width:320px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,.18)}
 .modal h3{font-size:15px;font-weight:700;margin-bottom:6px}
@@ -77,6 +71,10 @@ body{background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,'H
 .modal-btns{display:flex;gap:8px;margin-bottom:10px}
 .modal-btns .btn{flex:1;justify-content:center}
 .modal-cancel{text-align:right}
+
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1a1714;color:#fff;padding:9px 18px;border-radius:8px;font-size:12px;font-weight:600;pointer-events:none;opacity:0;transition:opacity .25s;z-index:999}
+.toast.show{opacity:1}
+.err-bar{background:#fff3f3;border:1.5px solid #f0a0a0;border-radius:8px;padding:10px 14px;font-size:12px;color:#c04040;margin:10px;line-height:1.6}
 
 @media(max-width:680px){
   body,#root{height:auto;overflow:visible}
@@ -97,117 +95,91 @@ body{background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,'H
 <script type="text/babel">
 const { useState, useEffect, useCallback } = React;
 
-// ── IndexedDB ────────────────────────────────────────────────
-const DB_NAME = 'nigaoe-db', DB_VER = 1, STORE = 'parts';
-let _db = null;
-function openDB() {
-  if (_db) return Promise.resolve(_db);
-  return new Promise((res, rej) => {
-    const req = indexedDB.open(DB_NAME, DB_VER);
-    req.onupgradeneeded = e => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains(STORE))
-        db.createObjectStore(STORE, {keyPath:'id', autoIncrement:true});
-    };
-    req.onsuccess = e => { _db = e.target.result; res(_db); };
-    req.onerror = rej;
-  });
-}
-async function dbGetAll() {
-  const db = await openDB();
-  return new Promise((res, rej) => {
-    const tx = db.transaction(STORE, 'readonly');
-    const req = tx.objectStore(STORE).getAll();
-    req.onsuccess = () => res(req.result);
-    req.onerror = rej;
-  });
+// ── API ──────────────────────────────────────────────────────
+const API = '/api';
+
+async function apiFetch(path, opts = {}) {
+  const res = await fetch(API + path, opts);
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error || 'APIエラー');
+  return json.data;
 }
 
-// ── Constants ────────────────────────────────────────────────
+// ── Constants ─────────────────────────────────────────────────
 const CATS = [
-  {id:'face',        label:'顔型'},
-  {id:'backHair',    label:'後ろ髪'},
-  {id:'frontHair',   label:'前髪'},
-  {id:'decoHair',    label:'装飾髪'},
-  {id:'brows',       label:'眉'},
-  {id:'eyes',        label:'目'},
-  {id:'nose',        label:'鼻'},
-  {id:'mouth',       label:'口'},
+  {id:'face',          label:'顔型'},
+  {id:'backHair',      label:'後ろ髪'},
+  {id:'frontHair',     label:'前髪'},
+  {id:'decoHair',      label:'装飾髪'},
+  {id:'brows',         label:'眉'},
+  {id:'eyes',          label:'目'},
+  {id:'nose',          label:'鼻'},
+  {id:'mouth',         label:'口'},
   {id:'headAccessory', label:'頭アクセ'},
-  {id:'other',       label:'その他'},
+  {id:'other',         label:'その他'},
 ];
 
-// PNG layers rendered in front of face (backHair is handled separately, before face)
 const FRONT_LAYERS = ['frontHair','brows','eyes','nose','mouth','decoHair','headAccessory','other'];
+const SKIN_COLORS  = ['#fde8cc','#f5c8a0','#e8a87c','#c67c52','#8d4a2e','#5c2f1a'];
 
-const SKIN_COLORS = ['#fde8cc','#f5c8a0','#e8a87c','#c67c52','#8d4a2e','#5c2f1a'];
-
-// ── Built-in face shapes (SVG, skin-color-changeable) ────────
 const INK = '#2a1f1a';
 const BUILTIN_FACES = {
-  b_round: {label:'丸顔',
-    Comp:({s})=><g>
-      <ellipse cx={170} cy={200} rx={118} ry={128} fill={s} stroke={INK} strokeWidth={2.8}/>
-      <ellipse cx={52}  cy={202} rx={16}  ry={20}  fill={s} stroke={INK} strokeWidth={2}/>
-      <ellipse cx={288} cy={202} rx={16}  ry={20}  fill={s} stroke={INK} strokeWidth={2}/>
-    </g>},
-  b_oval: {label:'卵型',
-    Comp:({s})=><g>
-      <ellipse cx={170} cy={200} rx={104} ry={138} fill={s} stroke={INK} strokeWidth={2.8}/>
-      <ellipse cx={66}  cy={202} rx={14}  ry={18}  fill={s} stroke={INK} strokeWidth={2}/>
-      <ellipse cx={274} cy={202} rx={14}  ry={18}  fill={s} stroke={INK} strokeWidth={2}/>
-    </g>},
-  b_long: {label:'面長',
-    Comp:({s})=><g>
-      <ellipse cx={170} cy={202} rx={88}  ry={146} fill={s} stroke={INK} strokeWidth={2.8}/>
-      <ellipse cx={82}  cy={205} rx={13}  ry={17}  fill={s} stroke={INK} strokeWidth={2}/>
-      <ellipse cx={258} cy={205} rx={13}  ry={17}  fill={s} stroke={INK} strokeWidth={2}/>
-    </g>},
-  b_wide: {label:'ぽっちゃり',
-    Comp:({s})=><g>
-      <ellipse cx={170} cy={198} rx={134} ry={118} fill={s} stroke={INK} strokeWidth={2.8}/>
-      <ellipse cx={36}  cy={200} rx={18}  ry={22}  fill={s} stroke={INK} strokeWidth={2}/>
-      <ellipse cx={304} cy={200} rx={18}  ry={22}  fill={s} stroke={INK} strokeWidth={2}/>
-    </g>},
-  b_slim: {label:'ほっそり',
-    Comp:({s})=><g>
-      <ellipse cx={170} cy={200} rx={86}  ry={142} fill={s} stroke={INK} strokeWidth={2.8}/>
-      <ellipse cx={84}  cy={202} rx={12}  ry={16}  fill={s} stroke={INK} strokeWidth={2}/>
-      <ellipse cx={256} cy={202} rx={12}  ry={16}  fill={s} stroke={INK} strokeWidth={2}/>
-    </g>},
-  b_sharp: {label:'シャープ',
-    Comp:({s})=><g>
-      <path d="M170 70 C232 70 285 116 283 183 C281 246 237 312 170 320 C103 312 59 246 57 183 C55 116 108 70 170 70Z"
-        fill={s} stroke={INK} strokeWidth={2.8} strokeLinejoin="round"/>
-      <ellipse cx={55}  cy={198} rx={13} ry={17} fill={s} stroke={INK} strokeWidth={2}/>
-      <ellipse cx={285} cy={198} rx={13} ry={17} fill={s} stroke={INK} strokeWidth={2}/>
-    </g>},
+  b_round:  {label:'丸顔',     Comp:({s})=><g><ellipse cx={170} cy={200} rx={118} ry={128} fill={s} stroke={INK} strokeWidth={2.8}/><ellipse cx={52}  cy={202} rx={16} ry={20} fill={s} stroke={INK} strokeWidth={2}/><ellipse cx={288} cy={202} rx={16} ry={20} fill={s} stroke={INK} strokeWidth={2}/></g>},
+  b_oval:   {label:'卵型',     Comp:({s})=><g><ellipse cx={170} cy={200} rx={104} ry={138} fill={s} stroke={INK} strokeWidth={2.8}/><ellipse cx={66}  cy={202} rx={14} ry={18} fill={s} stroke={INK} strokeWidth={2}/><ellipse cx={274} cy={202} rx={14} ry={18} fill={s} stroke={INK} strokeWidth={2}/></g>},
+  b_long:   {label:'面長',     Comp:({s})=><g><ellipse cx={170} cy={202} rx={88}  ry={146} fill={s} stroke={INK} strokeWidth={2.8}/><ellipse cx={82}  cy={205} rx={13} ry={17} fill={s} stroke={INK} strokeWidth={2}/><ellipse cx={258} cy={205} rx={13} ry={17} fill={s} stroke={INK} strokeWidth={2}/></g>},
+  b_wide:   {label:'ぽっちゃり',Comp:({s})=><g><ellipse cx={170} cy={198} rx={134} ry={118} fill={s} stroke={INK} strokeWidth={2.8}/><ellipse cx={36}  cy={200} rx={18} ry={22} fill={s} stroke={INK} strokeWidth={2}/><ellipse cx={304} cy={200} rx={18} ry={22} fill={s} stroke={INK} strokeWidth={2}/></g>},
+  b_slim:   {label:'ほっそり',  Comp:({s})=><g><ellipse cx={170} cy={200} rx={86}  ry={142} fill={s} stroke={INK} strokeWidth={2.8}/><ellipse cx={84}  cy={202} rx={12} ry={16} fill={s} stroke={INK} strokeWidth={2}/><ellipse cx={256} cy={202} rx={12} ry={16} fill={s} stroke={INK} strokeWidth={2}/></g>},
+  b_sharp:  {label:'シャープ',  Comp:({s})=><g><path d="M170 70 C232 70 285 116 283 183 C281 246 237 312 170 320 C103 312 59 246 57 183 C55 116 108 70 170 70Z" fill={s} stroke={INK} strokeWidth={2.8} strokeLinejoin="round"/><ellipse cx={55} cy={198} rx={13} ry={17} fill={s} stroke={INK} strokeWidth={2}/><ellipse cx={285} cy={198} rx={13} ry={17} fill={s} stroke={INK} strokeWidth={2}/></g>},
 };
 const DEFAULT_FACE = 'b_round';
 
-// ── App ──────────────────────────────────────────────────────
-function App() {
-  const [partsBycat, setPartsBycat] = useState({});  // { catId: [{id,label,url,...}] }
-  const [selected, setSelected]     = useState({face: DEFAULT_FACE});
-  const [skin, setSkin]             = useState('#f5c8a0');
-  const [activeCat, setActiveCat]   = useState('face');
-  const [activeTab, setActiveTab]   = useState('parts');
-  const [showSave, setShowSave]     = useState(false);
+// ── Toast ─────────────────────────────────────────────────────
+let _toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('g-toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+}
 
-  // Load parts from IndexedDB
+// ── App ───────────────────────────────────────────────────────
+function App() {
+  const [partsBycat, setPartsBycat] = useState({});
+  const [selected,   setSelected]   = useState({face: DEFAULT_FACE});
+  const [skin,       setSkin]       = useState('#f5c8a0');
+  const [activeCat,  setActiveCat]  = useState('face');
+  const [activeTab,  setActiveTab]  = useState('parts');
+  const [showSave,   setShowSave]   = useState(false);
+  const [apiError,   setApiError]   = useState('');
+  const faceSize = 320;
+
+  // ── パーツ読み込み ─────────────────────────────────────────
   const loadParts = useCallback(async () => {
-    const all = await dbGetAll();
-    const byCat = {};
-    all.forEach(p => {
-      if (!byCat[p.category]) byCat[p.category] = [];
-      byCat[p.category].push(p);
-    });
-    setPartsBycat(byCat);
+    try {
+      const data = await apiFetch('/parts.php');
+      setPartsBycat(data || {});
+      setApiError('');
+    } catch (e) {
+      setApiError('APIに接続できません。サーバーにアップロードして使用してください。\n(' + e.message + ')');
+    }
   }, []);
 
-  useEffect(() => { loadParts(); }, []);
+  // ── URLトークンからアバター復元 ────────────────────────────
+  useEffect(() => {
+    loadParts();
+    const token = new URLSearchParams(location.search).get('token');
+    if (!token) return;
+    apiFetch('/avatars.php?token=' + encodeURIComponent(token))
+      .then(d => {
+        if (d?.selected) setSelected(d.selected);
+        if (d?.skin)     setSkin(d.skin);
+      })
+      .catch(e => showToast('共有データを読み込めませんでした: ' + e.message));
+  }, []);
 
-  // Listen for storage events (if admin opened in another tab)
+  // フォーカスが戻ったら再読み込み（admin.html との連携）
   useEffect(() => {
     const onFocus = () => loadParts();
     window.addEventListener('focus', onFocus);
@@ -218,6 +190,7 @@ function App() {
     setSelected(s => ({...s, [cat]: s[cat] === id ? null : id}));
   }, []);
 
+  // ── ランダム ───────────────────────────────────────────────
   const randomize = useCallback(() => {
     const builtinKeys = Object.keys(BUILTIN_FACES);
     const facePngs = partsBycat.face || [];
@@ -232,24 +205,26 @@ function App() {
     setSkin(SKIN_COLORS[Math.floor(Math.random() * SKIN_COLORS.length)]);
   }, [partsBycat]);
 
-  const reset = useCallback(() => { setSelected({face: DEFAULT_FACE}); setSkin('#f5c8a0'); }, []);
+  const reset = useCallback(() => {
+    setSelected({face: DEFAULT_FACE});
+    setSkin('#f5c8a0');
+  }, []);
 
-  // PNG export
+  // ── PNG 保存 ───────────────────────────────────────────────
   const doExport = useCallback((bg) => {
     const svgEl = document.getElementById('face-svg');
     if (!svgEl) return;
     const data = new XMLSerializer().serializeToString(svgEl);
     const canvas = document.createElement('canvas');
-    const W = 680, H = 800;
-    canvas.width = W; canvas.height = H;
+    canvas.width = 680; canvas.height = 800;
     const ctx = canvas.getContext('2d');
-    if (bg === 'white') { ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,W,H); }
-    if (bg === 'cream') { ctx.fillStyle = '#f5f0e8'; ctx.fillRect(0,0,W,H); }
+    if (bg === 'white') { ctx.fillStyle = '#fff';     ctx.fillRect(0,0,680,800); }
+    if (bg === 'cream') { ctx.fillStyle = '#f5f0e8';  ctx.fillRect(0,0,680,800); }
     const img = new Image();
     const blob = new Blob([data], {type:'image/svg+xml'});
     const url = URL.createObjectURL(blob);
     img.onload = () => {
-      ctx.drawImage(img, 0, 0, W, H);
+      ctx.drawImage(img, 0, 0, 680, 800);
       const a = document.createElement('a');
       a.download = `nigaoe_${Date.now()}.png`;
       a.href = canvas.toDataURL('image/png');
@@ -260,19 +235,31 @@ function App() {
     img.src = url;
   }, []);
 
-  const currentCatParts = partsBycat[activeCat] || [];
-  const totalParts = Object.values(partsBycat).reduce((n, a) => n + a.length, 0);
+  // ── 共有 URL 生成 ──────────────────────────────────────────
+  const shareAvatar = useCallback(async () => {
+    try {
+      const d = await apiFetch('/avatars.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ selected, skin }),
+      });
+      const shareUrl = `${location.origin}${location.pathname}?token=${d.token}`;
+      await navigator.clipboard.writeText(shareUrl).catch(() => {});
+      showToast('共有URLをクリップボードにコピーしました');
+    } catch (e) {
+      showToast('共有に失敗しました: ' + e.message);
+    }
+  }, [selected, skin]);
 
-  // SVG face size
-  const faceSize = 320;
+  const currentCatParts = partsBycat[activeCat] || [];
 
   return (
-    <div id="root" style={{height:'100vh',display:'flex',flexDirection:'column'}}>
+    <div style={{height:'100vh',display:'flex',flexDirection:'column'}}>
 
-      {/* Header */}
       <div className="hdr">
         <div className="logo">にがおえ<span> Maker</span></div>
         <div className="hdr-r">
+          <button className="btn" onClick={shareAvatar}>URLで共有</button>
           <button className="btn" onClick={randomize}>ランダム</button>
           <button className="btn" onClick={reset}>リセット</button>
           <button className="btn p" onClick={() => setShowSave(true)}>PNG保存</button>
@@ -280,10 +267,11 @@ function App() {
         </div>
       </div>
 
-      {/* Category tabs */}
       <div className="cat-bar">
         {CATS.map(c => {
-          const count = (partsBycat[c.id] || []).length;
+          const count = c.id === 'face'
+            ? Object.keys(BUILTIN_FACES).length + (partsBycat.face?.length || 0)
+            : (partsBycat[c.id] || []).length;
           return (
             <button key={c.id} className={`cat-btn${activeCat===c.id?' on':''}`}
               onClick={() => { setActiveCat(c.id); setActiveTab('parts'); }}>
@@ -294,11 +282,16 @@ function App() {
         })}
       </div>
 
-      {/* Main */}
       <div className="main">
 
-        {/* Left: SVG preview */}
+        {/* 左: SVG プレビュー */}
         <div className="prev">
+          {apiError && (
+            <div className="err-bar" style={{maxWidth:320,fontSize:11}}>
+              {apiError.split('\n').map((l,i) => <div key={i}>{l}</div>)}
+            </div>
+          )}
+
           <div className="face-frame" style={{width:faceSize, height:faceSize*400/340}}>
             <svg id="face-svg" viewBox="0 0 340 400"
               style={{width:faceSize, height:faceSize*400/340}}
@@ -310,42 +303,39 @@ function App() {
                 return part ? <image href={part.url} x={0} y={0} width={340} height={400}/> : null;
               })()}
 
-              {/* ② 顔ベース（SVGビルトイン or カスタムPNG） */}
+              {/* ② 顔ベース（SVG ビルトイン or カスタム PNG） */}
               {(() => {
                 const faceId = selected.face || DEFAULT_FACE;
                 if (BUILTIN_FACES[faceId]) {
-                  const FaceComp = BUILTIN_FACES[faceId].Comp;
-                  return <FaceComp s={skin}/>;
+                  const FC = BUILTIN_FACES[faceId].Comp;
+                  return <FC s={skin}/>;
                 }
                 const part = (partsBycat.face || []).find(p => p.id === faceId);
                 if (part) return <image href={part.url} x={0} y={0} width={340} height={400}/>;
-                const Fallback = BUILTIN_FACES[DEFAULT_FACE].Comp;
-                return <Fallback s={skin}/>;
+                const FB = BUILTIN_FACES[DEFAULT_FACE].Comp;
+                return <FB s={skin}/>;
               })()}
 
-              {/* 首（SVG固定） */}
+              {/* 首 */}
               <rect x={145} y={315} width={50} height={42} fill={skin}/>
 
-              {/* ③ 前髪〜その他（顔の前面レイヤー） */}
+              {/* ③ 前髪〜その他 */}
               {FRONT_LAYERS.map(cat => {
                 const partId = selected[cat];
                 if (!partId) return null;
                 const part = (partsBycat[cat] || []).find(p => p.id === partId);
                 if (!part) return null;
-                if (cat === 'eyes') {
-                  return (
-                    <g key="eyes">
-                      {part.leftUrl  && <image href={part.leftUrl}  x={0} y={0} width={340} height={400}/>}
-                      {part.rightUrl && <image href={part.rightUrl} x={0} y={0} width={340} height={400}/>}
-                    </g>
-                  );
-                }
+                if (cat === 'eyes') return (
+                  <g key="eyes">
+                    {part.leftUrl  && <image href={part.leftUrl}  x={0} y={0} width={340} height={400}/>}
+                    {part.rightUrl && <image href={part.rightUrl} x={0} y={0} width={340} height={400}/>}
+                  </g>
+                );
                 return <image key={cat} href={part.url} x={0} y={0} width={340} height={400}/>;
               })}
             </svg>
           </div>
 
-          {/* Skin color picker */}
           <div className="skin-row">
             <span className="skin-lbl">肌</span>
             {SKIN_COLORS.map(c => (
@@ -353,81 +343,67 @@ function App() {
                 style={{background:c}} onClick={() => setSkin(c)}/>
             ))}
           </div>
-
-          {totalParts === 0 && (
-            <div style={{fontSize:11,color:'var(--mu)',textAlign:'center',lineHeight:1.8}}>
-              パーツがありません<br/>
-              <a href="admin.html" target="_blank" style={{color:'var(--acc)',fontWeight:600}}>
-                管理画面
-              </a>からPNGを追加してください
-            </div>
-          )}
         </div>
 
-        {/* Right: panel */}
+        {/* 右: パネル */}
         <div className="rpan">
           <div className="stabs">
             <button className={`stab${activeTab==='parts'?' on':''}`} onClick={() => setActiveTab('parts')}>パーツ</button>
-            <button className={`stab${activeTab==='skin'?' on':''}`} onClick={() => setActiveTab('skin')}>肌の色</button>
+            <button className={`stab${activeTab==='skin'?' on':''}`}  onClick={() => setActiveTab('skin')}>肌の色</button>
           </div>
           <div className="pcontent">
 
-            {/* Parts tab */}
             {activeTab === 'parts' && (
               <div className="pgrid">
-                {/* 顔型カテゴリ：ビルトインSVG＋カスタムPNGを表示 */}
-                {activeCat === 'face' ? <>
-                  {Object.entries(BUILTIN_FACES).map(([id, shape]) => {
-                    const FC = shape.Comp;
-                    return (
-                      <div key={id} className={`pcard${selected.face===id?' on':''}`}
-                        onClick={() => selectPart('face', id)}>
-                        <svg viewBox="0 0 340 400" style={{width:'100%',height:'100%',display:'block'}}>
-                          <FC s={skin}/>
-                        </svg>
-                        <div className="plbl">{shape.label}</div>
-                      </div>
-                    );
-                  })}
-                  {(partsBycat.face || []).map(p => (
-                    <div key={p.id} className={`pcard${selected.face===p.id?' on':''}`}
-                      onClick={() => selectPart('face', p.id)}>
-                      <img src={p.url} alt={p.label} loading="lazy"/>
-                      <div className="plbl">{p.label}</div>
-                    </div>
-                  ))}
-                </> : <>
-                {/* その他カテゴリ：なし＋PNG */}
-                <div className={`none-card${!selected[activeCat]?' on':''}`}
-                  onClick={() => selectPart(activeCat, null)}>
-                  <div className="nc-icon">✕</div>
-                  <div className="plbl">なし</div>
-                </div>
-
-                {currentCatParts.length === 0 ? (
-                  <div className="empty-cat">
-                    このカテゴリにパーツがありません<br/>
-                    <a href="admin.html" target="_blank">管理画面</a>
-                    からPNGを追加してください
-                  </div>
-                ) : (
-                  currentCatParts.map(p => {
-                    const thumb = p.category === 'eyes' ? (p.rightUrl || p.url) : p.url;
-                    return (
-                      <div key={p.id}
-                        className={`pcard${selected[activeCat]===p.id?' on':''}`}
-                        onClick={() => selectPart(activeCat, p.id)}>
-                        <img src={thumb} alt={p.label} loading="lazy"/>
+                {activeCat === 'face' ? (
+                  <>
+                    {Object.entries(BUILTIN_FACES).map(([id, shape]) => {
+                      const FC = shape.Comp;
+                      return (
+                        <div key={id} className={`pcard${selected.face===id?' on':''}`}
+                          onClick={() => selectPart('face', id)}>
+                          <svg viewBox="0 0 340 400" style={{width:'100%',height:'100%',display:'block'}}>
+                            <FC s={skin}/>
+                          </svg>
+                          <div className="plbl">{shape.label}</div>
+                        </div>
+                      );
+                    })}
+                    {(partsBycat.face || []).map(p => (
+                      <div key={p.id} className={`pcard${selected.face===p.id?' on':''}`}
+                        onClick={() => selectPart('face', p.id)}>
+                        <img src={p.url} alt={p.label} loading="lazy"/>
                         <div className="plbl">{p.label}</div>
                       </div>
-                    );
-                  })
+                    ))}
+                  </>
+                ) : (
+                  <>
+                    <div className={`none-card${!selected[activeCat]?' on':''}`}
+                      onClick={() => selectPart(activeCat, null)}>
+                      <div className="nc-icon">✕</div>
+                      <div className="plbl">なし</div>
+                    </div>
+                    {currentCatParts.length === 0 ? (
+                      <div className="empty-cat">
+                        パーツがありません<br/>
+                        <a href="admin.html" target="_blank">管理画面</a>から追加してください
+                      </div>
+                    ) : currentCatParts.map(p => {
+                      const thumb = p.category === 'eyes' ? (p.rightUrl || p.url) : p.url;
+                      return (
+                        <div key={p.id} className={`pcard${selected[activeCat]===p.id?' on':''}`}
+                          onClick={() => selectPart(activeCat, p.id)}>
+                          <img src={thumb} alt={p.label} loading="lazy"/>
+                          <div className="plbl">{p.label}</div>
+                        </div>
+                      );
+                    })}
+                  </>
                 )}
-                </>}
               </div>
             )}
 
-            {/* Skin color tab */}
             {activeTab === 'skin' && (
               <div style={{padding:'14px'}}>
                 <div style={{fontSize:11,fontWeight:600,color:'var(--mu)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:10}}>肌の色</div>
@@ -443,12 +419,12 @@ function App() {
         </div>
       </div>
 
-      {/* Save modal */}
+      {/* PNG 保存モーダル */}
       {showSave && (
         <div className="modal-overlay" onClick={() => setShowSave(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h3>背景を選んで保存</h3>
-            <p>PNG形式でダウンロードします</p>
+            <p>PNG 形式でダウンロードします</p>
             <div className="modal-btns">
               <button className="btn p" onClick={() => doExport('white')}>白</button>
               <button className="btn p" onClick={() => doExport('cream')}>クリーム</button>
@@ -461,6 +437,7 @@ function App() {
         </div>
       )}
 
+      <div id="g-toast" className="toast"></div>
     </div>
   );
 }
